@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthSignal LATAM — Arquitectura Completa</title>
+<style>
+:root {
+  --bg: #f7f9fc;
+  --panel: #ffffff;
+  --panel-2: #eef3fb;
+  --border: #d7e2f2;
+  --border-soft: #e6edf7;
+  --text-primary: #0f2647;
+  --text-secondary: #48577a;
+  --text-muted: #8393b3;
+  --blue: #1d4ed8;
+  --blue-soft: #e8eefd;
+  --blue-deep: #14338f;
+  --wow-soft: #eaf0fe;
+  --wow-border: #b9cdfb;
+  --mono: 'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --sans: 'Inter',-apple-system,system-ui,sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--sans); background:var(--bg); color:var(--text-primary); }
+.wrap { max-width:800px; margin:0 auto; padding:32px 20px 80px; }
+
+.eyebrow { font-size:11px; color:var(--text-muted); letter-spacing:0.14em; font-weight:700; text-transform:uppercase; }
+h1 { font-size:27px; font-weight:700; color:var(--text-primary); margin:8px 0 6px; letter-spacing:-0.01em; }
+.lead { font-size:14px; color:var(--text-secondary); line-height:1.6; max-width:600px; margin-bottom:24px; }
+
+.summary-bar { display:flex; gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:20px; background:var(--panel); box-shadow:0 1px 2px rgba(15,38,71,0.04); }
+.summary-cell { flex:1; padding:14px 16px; border-right:1px solid var(--border); }
+.summary-cell:last-child { border-right:none; }
+.summary-num { font-family:var(--mono); font-size:19px; font-weight:700; color:var(--blue-deep); }
+.summary-label { font-size:10.5px; color:var(--text-muted); margin-top:2px; text-transform:uppercase; letter-spacing:0.05em; }
+
+.legend { display:flex; gap:20px; margin-bottom:28px; font-size:12.5px; color:var(--text-secondary); }
+.legend-item { display:flex; align-items:center; gap:7px; }
+.legend-dot { width:9px; height:9px; border-radius:3px; }
+
+.stage { border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; background:var(--panel); box-shadow:0 1px 2px rgba(15,38,71,0.04); }
+.stage.wow-stage { border-color:var(--wow-border); background:#fbfcff; }
+
+.stage-head { display:flex; align-items:center; gap:16px; padding:16px 20px; cursor:pointer; transition:background 0.15s; }
+.stage-head:hover { background:var(--panel-2); }
+
+.stage-index { font-family:var(--mono); font-size:12px; font-weight:700; width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:8px; background:var(--blue-soft); color:var(--blue-deep); }
+.stage.wow-stage .stage-index { background:var(--wow-soft); color:var(--blue); border:1px solid var(--wow-border); }
+
+.stage-main { flex:1; min-width:0; }
+.stage-title-row { display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap; }
+.stage-title { font-size:14.5px; font-weight:700; color:var(--text-primary); }
+.stage-tag { font-size:9.5px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:2px 8px; border-radius:5px; background:var(--blue-soft); color:var(--blue-deep); }
+.stage.wow-stage .stage-tag { background:var(--wow-soft); color:var(--blue); border:1px solid var(--wow-border); }
+.stage-sub { font-size:12.5px; color:var(--text-secondary); }
+
+.stage-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.stage-tech { font-family:var(--mono); font-size:10.5px; color:var(--text-muted); }
+.stage-time { font-size:10.5px; color:var(--text-muted); font-weight:600; }
+
+.chevron { width:16px; height:16px; flex-shrink:0; color:var(--text-muted); transition:transform 0.2s; }
+.stage.open .chevron { transform:rotate(180deg); }
+
+.stage-body { max-height:0; overflow:hidden; transition:max-height 0.25s ease; }
+.stage.open .stage-body { max-height:3000px; }
+.stage-body-inner { padding:4px 20px 22px; border-top:1px solid var(--border-soft); }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
+@media (max-width:600px) { .grid-2 { grid-template-columns:1fr; } }
+
+.info-block { background:var(--panel-2); border:1px solid var(--border-soft); border-radius:9px; padding:12px 14px; }
+.stage.wow-stage .info-block { background:var(--wow-soft); }
+.info-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue-deep); margin-bottom:6px; }
+.info-text { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+.info-text strong { color:var(--text-primary); font-weight:700; }
+.info-text code { font-family:var(--mono); font-size:11.5px; background:#fff; padding:1px 5px; border-radius:4px; color:var(--blue-deep); border:1px solid var(--border-soft); }
+
+.mechanism-list { list-style:none; margin:10px 0; }
+.mechanism-list li { font-size:13px; color:var(--text-secondary); line-height:1.7; padding-left:16px; position:relative; margin-bottom:4px; }
+.mechanism-list li::before { content:'—'; position:absolute; left:0; color:var(--text-muted); }
+
+.example { background:var(--panel-2); border:1px solid var(--border-soft); border-left:3px solid var(--blue); border-radius:8px; padding:12px 16px; margin:14px 0; }
+.stage.wow-stage .example { background:var(--wow-soft); }
+.example-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue-deep); margin-bottom:5px; }
+.example-text { font-size:12.5px; color:var(--text-secondary); line-height:1.65; font-family:var(--mono); }
+.example-text strong { color:var(--text-primary); }
+
+.risk-block { background:#fef8ec; border:1px solid #f3e2b8; border-radius:8px; padding:10px 14px; margin-top:12px; }
+.risk-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#92620c; margin-bottom:4px; }
+.risk-text { font-size:12.5px; color:#6b4a09; line-height:1.6; }
+
+.output-row { display:flex; align-items:center; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); flex-wrap:wrap; }
+.output-arrow { font-size:12px; color:var(--text-muted); font-family:var(--mono); }
+.output-badge { font-family:var(--mono); font-size:11.5px; background:var(--blue-soft); border:1px solid var(--border-soft); padding:3px 10px; border-radius:6px; color:var(--blue-deep); font-weight:600; }
+
+.connector { display:flex; justify-content:flex-start; padding-left:35px; }
+.connector-line { width:2px; height:12px; background:var(--border); }
+.connector.wow-connector .connector-line { background:var(--wow-border); }
+
+.decision-box { margin-top:32px; padding:22px; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+.decision-title { font-size:14.5px; font-weight:700; color:var(--text-primary); margin-bottom:10px; }
+.decision-text { font-size:13px; color:var(--text-secondary); line-height:1.7; }
+.decision-text strong { color:var(--text-primary); }
+.priority-chain { display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap; font-size:12.5px; }
+.priority-item { padding:5px 12px; border-radius:7px; border:1px solid var(--border); color:var(--text-secondary); font-weight:600; background:var(--panel-2); }
+.priority-item.wow { border-color:var(--wow-border); color:var(--blue-deep); background:var(--wow-soft); }
+.priority-arrow { color:var(--text-muted); }
+
+.final-box { text-align:center; margin-top:16px; padding:20px; border-radius:12px; background:var(--blue-deep); color:#fff; }
+.final-title { font-size:15.5px; font-weight:700; }
+.final-sub { font-size:12px; color:#c3d3f7; margin-top:4px; font-family:var(--mono); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">HealthSignal LATAM · RISA Data V1.0</div>
+  <h1>Arquitectura completa de la solución</h1>
+  <p class="lead">Pipeline de 6 etapas base más las 3 mejoras wow integradas en el punto exacto donde se agregan. Pulsa cualquier etapa para ver el detalle técnico.</p>
+
+  <div class="summary-bar">
+    <div class="summary-cell">
+      <div class="summary-num">9</div>
+      <div class="summary-label">Etapas totales</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-num">~31h</div>
+      <div class="summary-label">Solo nivel base</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-num">+9-13h</div>
+      <div class="summary-label">Con mejoras wow</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-num">2</div>
+      <div class="summary-label">CSV finales</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:var(--blue-deep)"></span> Etapa base (obligatoria)</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--blue); border:1px solid var(--wow-border)"></span> Mejora wow (opcional)</div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" id="s1">
+    <div class="stage-head" onclick="toggle('s1')">
+      <div class="stage-index">1</div>
+      <div class="stage-main">
+        <div class="stage-title-row"><span class="stage-title">Integración</span></div>
+        <div class="stage-sub">Timeline unificado del paciente</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas</span>
+        <span class="stage-time">~6h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Qué resuelve</div>
+            <div class="info-text">RISA tiene los datos repartidos en varios archivos (signos vitales, laboratorio, wearables, medicamentos, contexto), cada uno con su propia estructura y frecuencia. Esta capa <strong>apila todo en una sola tabla larga</strong> con un esquema común — un append, no un join.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Qué se limpia</div>
+            <div class="info-text">Normalización de <strong>unidades</strong> (°C/°F, mg·dL/mmol·L), <strong>deduplicación</strong> de retransmisiones, y marcado de <code>data_origin: observed/imputed</code>.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Paciente 347: 200 signos vitales (c/15min) + 3 labs + 500 lecturas wearable + 2 medicamentos → ~705 filas en una sola tabla, cada una con su origen y timestamp conservados.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">timeline_df</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" id="s2">
+    <div class="stage-head" onclick="toggle('s2')">
+      <div class="stage-index">2</div>
+      <div class="stage-main">
+        <div class="stage-title-row"><span class="stage-title">Features</span></div>
+        <div class="stage-sub">Indicadores por paciente y ventana temporal</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas · numpy</span>
+        <span class="stage-time">~6h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Qué resuelve</div>
+            <div class="info-text">Un valor crudo no dice nada solo. Esta capa calcula <strong>z-score personal</strong> (vs. baseline propio, no poblacional), <strong>tendencias</strong> corta/media, <strong>persistencia</strong>, <strong>calidad</strong> y <strong>contexto</strong>.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Regla crítica</div>
+            <div class="info-text">Todo se calcula con <code>available_datetime ≤ T</code> mediante una función central — garantiza cero leakage temporal en todo el pipeline.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Pac. 347 a las 14:00h: FC=112 (z-score personal=+2.4), tendencia corta=+0.8 (subiendo), persistencia=4 puntos, quality=0.9, sin actividad física registrada.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">features_df</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" id="s3">
+    <div class="stage-head" onclick="toggle('s3')">
+      <div class="stage-index">3</div>
+      <div class="stage-main">
+        <div class="stage-title-row"><span class="stage-title">Detección</span></div>
+        <div class="stage-sub">Reglas explícitas + Isolation Forest en paralelo</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas · sklearn</span>
+        <span class="stage-time">~8h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Motor de reglas</div>
+            <div class="info-text">1) <code>|zscore| &gt; 2.0</code> → 2) <code>persistencia ≥ 3</code> → 3) <code>≥2 variables co-desviadas</code>. 100% explicable, sin entrenamiento.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Isolation Forest</div>
+            <div class="info-text">No supervisado, sin etiquetas. Detecta combinaciones raras que las reglas no anticiparon (ej. 4 variables levemente desviadas).</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Pac. 347: reglas lo detectan (FC+SpO2 co-desviadas 4pts) Y anomaly_score=0.82. Pac. 589: solo el ML lo detecta — ninguna variable pasa z-score&gt;2 individualmente.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">candidate_signals_df</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector wow-connector"><div class="connector-line"></div></div>
+
+  <!-- WOW 1: TRAYECTORIAS -->
+  <div class="stage wow-stage" id="w1">
+    <div class="stage-head" onclick="toggle('w1')">
+      <div class="stage-index">3+</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <span class="stage-title">Trayectorias temporales</span>
+          <span class="stage-tag">mejora wow</span>
+        </div>
+        <div class="stage-sub">Clasificar la forma de la evolución, no solo el estado puntual</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">dtaidistance</span>
+        <span class="stage-time">+4-6h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Qué aporta</div>
+            <div class="info-text">Detecta la <strong>forma</strong> de la evolución (deterioro sostenido, recaída, ruido, estable), no solo el estado en un instante. Ataca "análisis temporal" (6 pts) con algo que el jurado no espera.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Cómo funciona</div>
+            <div class="info-text">Comparar la serie del paciente contra arquetipos de referencia con <code>Dynamic Time Warping</code>. Alternativa barata: <code>k-means</code> sobre features de forma.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Pac. 347: distancia DTW=2.1 a "deterioro sostenido" vs 8.4 a "estable" → se clasifica como deterioro progresivo, reforzando la urgencia.</div>
+        </div>
+        <div class="risk-block">
+          <div class="risk-label">Riesgo</div>
+          <div class="risk-text">Esfuerzo alto. Solo intentar si los pasos 1-6 base ya corren de punta a punta y quedan ≥8h.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">agrega a →</span>
+          <span class="output-badge">candidate_signals_df.trajectory_type</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" id="s4">
+    <div class="stage-head" onclick="toggle('s4')">
+      <div class="stage-index">4</div>
+      <div class="stage-main">
+        <div class="stage-title-row"><span class="stage-title">Priorización</span></div>
+        <div class="stage-sub">Supresión de ruido + score + atenuación por contexto</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas · numpy</span>
+        <span class="stage-time">~4h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="info-block" style="margin-bottom:10px">
+          <div class="info-label">A · Supresión</div>
+          <div class="info-text">Sin persistencia ≥3 o con <code>quality_score &lt; 0.4</code> → descartar antes de calcular nada. Lo eliminado nunca aparece en signals.csv.</div>
+        </div>
+        <div class="info-block" style="margin-bottom:10px">
+          <div class="info-label">B · Score</div>
+          <div class="info-text"><code>risk_score = 0.4×magnitud + 0.35×co-ocurrencia + 0.25×persistencia</code>. Fórmula fija y documentada, no optimizada con ML.</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">C · Contexto</div>
+          <div class="info-text">Medicación activa → <code>×0.7</code>, actividad física → <code>×0.8</code> (atenúa, no elimina). Reglas duras nunca se degradan por debajo de HIGH.</div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Pac. 347: score=0.735 sin contexto → HIGH. Pac. 201: score=0.68 con medicación reciente → 0.68×0.7=0.476 → MEDIUM, con nota "atenuado por contexto".</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">signals_draft_df</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" id="s5">
+    <div class="stage-head" onclick="toggle('s5')">
+      <div class="stage-index">5</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <span class="stage-title">Ranking</span>
+          <span class="stage-tag">wow recomendado</span>
+        </div>
+        <div class="stage-sub">Cola de prioridad + métrica anti-alertas</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas</span>
+        <span class="stage-time">~3h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Cola de prioridad</div>
+            <div class="info-text">Ordenar señales por risk_score + top variables por señal. Responde "¿por qué A antes que B?" con una tabla, sin abrir código.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Métrica anti-alertas</div>
+            <div class="info-text">Comparar contra baseline de umbral fijo: <strong>"reducción del 86% en alertas"</strong> — número concreto para el pitch, ~15 líneas de pandas.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">#1 Pac.347: FC↑4h+SpO2↓ · #2 Pac.112: PA↓+creatinina↑ · #3 Pac.589: FC↑ (atenuado: actividad).</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">Ranking + % reducción de alertas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" id="s6">
+    <div class="stage-head" onclick="toggle('s6')">
+      <div class="stage-index">6</div>
+      <div class="stage-main">
+        <div class="stage-title-row"><span class="stage-title">Explicabilidad</span></div>
+        <div class="stage-sub">Plantillas deterministas + evidence.csv + validación</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas · f-strings</span>
+        <span class="stage-time">~4h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">signals.csv</div>
+            <div class="info-text"><code>explanation</code> por plantilla, insertando números reales. Sin texto libre inventado.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">evidence.csv</div>
+            <div class="info-text">Roles automáticos: <strong>PRIMARY</strong>, <strong>SUPPORTING</strong>, <strong>CONTEXT</strong>, <strong>QUALITY</strong> mapeados al registro fuente.</div>
+          </div>
+        </div>
+        <div class="risk-block" style="background:var(--blue-soft); border-color:var(--wow-border)">
+          <div class="risk-label" style="color:var(--blue-deep)">Validación obligatoria</div>
+          <div class="risk-text" style="color:var(--text-secondary)">Test automático: <code>available_datetime ≤ decision_datetime</code> en todo evidence.csv. Es lo primero que el jurado puede verificar.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">salida →</span>
+          <span class="output-badge">signals.csv</span>
+          <span class="output-badge">evidence.csv</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector wow-connector"><div class="connector-line"></div></div>
+
+  <!-- WOW 2: LLM -->
+  <div class="stage wow-stage" id="w2">
+    <div class="stage-head" onclick="toggle('w2')">
+      <div class="stage-index">6+</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <span class="stage-title">Redacción con LLM trazable</span>
+          <span class="stage-tag">mejora wow</span>
+        </div>
+        <div class="stage-sub">El LLM reformula, nunca inventa cifras</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">API Claude</span>
+        <span class="stage-time">+2-3h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Qué aporta</div>
+            <div class="info-text">Redacción natural sin sacrificar trazabilidad. Se guardan ambas versiones y una <strong>atribución porcentual</strong> por variable.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Cómo funciona</div>
+            <div class="info-text">Prompt: <code>"reformula sin modificar cifras"</code>. Guardar <code>explanation_raw</code> + <code>explanation_llm</code>.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Plantilla → "FC elevado (2.3 SD) durante 4h..." · Reformulado → "La frecuencia cardíaca se mantiene notablemente elevada desde hace 4 horas..." — mismos números.</div>
+        </div>
+        <div class="risk-block">
+          <div class="risk-label">Riesgo</div>
+          <div class="risk-text">Esfuerzo medio. Prompt engineering cuidadoso para que no agregue matices no sustentados.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">agrega a →</span>
+          <span class="output-badge">explanation_llm + attribution_pct</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- WOW 3: AUDITORÍA -->
+  <div class="stage wow-stage" id="w3">
+    <div class="stage-head" onclick="toggle('w3')">
+      <div class="stage-index">6+</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <span class="stage-title">Auditoría inversa</span>
+          <span class="stage-tag">mejora wow</span>
+        </div>
+        <div class="stage-sub">Reconstruir la cadena completa y probar sensibilidad</div>
+      </div>
+      <div class="stage-meta">
+        <span class="stage-tech">pandas</span>
+        <span class="stage-time">+3-4h</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="stage-body">
+      <div class="stage-body-inner">
+        <div class="grid-2">
+          <div class="info-block">
+            <div class="info-label">Qué aporta</div>
+            <div class="info-text">Responde "¿qué tan confiable es esto con datos imperfectos?" — exactamente lo que RISA está diseñado para testear.</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Cómo funciona</div>
+            <div class="info-text">Cadena inversa: <code>prioridad → score → regla → feature → dato fuente</code>. Recalcular con imputación alternativa.</div>
+          </div>
+        </div>
+        <div class="example">
+          <div class="example-label">Ejemplo</div>
+          <div class="example-text">Pac. 201 (MEDIUM, confidence 0.6): con otra imputación el score sube a 0.71 → cambiaría a HIGH → se marca "sensible a imputación".</div>
+        </div>
+        <div class="risk-block">
+          <div class="risk-label">Riesgo</div>
+          <div class="risk-text">Esfuerzo alto pero fácil de recortar sin romper el pipeline base — es una vista opcional, no una dependencia.</div>
+        </div>
+        <div class="output-row">
+          <span class="output-arrow">agrega a →</span>
+          <span class="output-badge">audit_trail() + sensitivity_flag</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-title">Regla de decisión</div>
+    <div class="decision-text">
+      Las 6 etapas base son <strong>obligatorias</strong> — sin ellas el sistema no cumple el formato de entrega ni corre de punta a punta. Las mejoras wow se agregan <strong>solo si</strong> el pipeline base ya corre sólido con datos reales y queda margen de al menos 8 horas. Ninguna reemplaza al pipeline base — todas se apilan encima sin romperlo.
+    </div>
+    <div class="priority-chain">
+      <span class="priority-item">Ranking (paso 5)</span>
+      <span class="priority-arrow">&gt;</span>
+      <span class="priority-item wow">Trayectorias</span>
+      <span class="priority-arrow">&gt;</span>
+      <span class="priority-item wow">LLM trazable</span>
+      <span class="priority-arrow">&gt;</span>
+      <span class="priority-item wow">Auditoría</span>
+    </div>
+  </div>
+
+  <div class="final-box">
+    <div class="final-title">Entrega al jurado</div>
+    <div class="final-sub">results/signals.csv · results/evidence.csv · código · README · arquitectura (≤5 páginas)</div>
+  </div>
+
+</div>
+
+<script>
+function toggle(id) {
+  var el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+</body>
+</html>

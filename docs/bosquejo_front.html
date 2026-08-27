@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthSignal LATAM — Consola de señales</title>
+<meta name="description" content="Consola clínica de apoyo a la decisión — señales de riesgo priorizadas, explicables y trazables. Prototipo HealthSignal LATAM.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   HEALTHSIGNAL LATAM — SISTEMA DE DISEÑO
+   Paleta clínica sobria · tipografía Inter · espaciado x4
+   ============================================================ */
+:root{
+  --color-primary:#0F766E;
+  --color-primary-dark:#115E59;
+  --color-primary-light:#CCFBF1;
+  --color-bg:#F8FAFC;
+  --color-surface:#FFFFFF;
+  --color-text:#0F172A;
+  --color-text-secondary:#64748B;
+  --color-border:#E2E8F0;
+  --color-info:#2563EB;
+  --color-info-bg:#EFF6FF;
+  --color-low:#15803D;      --color-low-bg:#F0FDF4;
+  --color-medium:#CA8A04;   --color-medium-bg:#FEFCE8;
+  --color-high:#EA580C;     --color-high-bg:#FFF7ED;
+  --color-critical:#DC2626; --color-critical-bg:#FEF2F2;
+  /* Variantes oscurecidas SOLO para texto/pastillas sólidas — mantienen el
+     tono de --color-medium/high/critical pero cumplen contraste WCAG AA
+     (4.5:1) en texto pequeño; los tonos base de arriba se usan tal cual
+     para puntos, bordes laterales e iconos (uso decorativo, sin texto). */
+  --color-medium-text:#996803;  --color-medium-solid:#9D6B03;
+  --color-high-text:#C4490A;    --color-high-solid:#CD4D0A;
+  --color-critical-text:#D72525;
+
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-6:24px; --space-8:32px; --space-12:48px;
+
+  --radius-sm:8px; --radius-md:10px; --radius-lg:12px;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.06);
+  --shadow-md:0 4px 12px rgba(15,23,42,.08);
+
+  --font-sans:'Inter','Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+
+  --header-h:64px;
+  --sidebar-w:240px;
+  --content-max:1440px;
+
+  --transition-fast:120ms ease;
+  --transition-base:180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0; background:var(--color-bg); color:var(--color-text);
+  font-family:var(--font-sans); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{ display:block; max-width:100%; }
+a{ color:var(--color-info); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+button{ font-family:inherit; }
+h1,h2,h3,h4,p,ul,ol{ margin:0; }
+ul{ padding:0; list-style:none; }
+::selection{ background:var(--color-primary-light); }
+
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+:focus-visible{ outline:2px solid var(--color-primary); outline-offset:2px; border-radius:4px; }
+
+/* Typography scale */
+.h1{ font-size:28px; font-weight:700; line-height:1.3; letter-spacing:-.01em; }
+@media(min-width:1024px){ .h1{ font-size:32px; } }
+.h2{ font-size:20px; font-weight:600; line-height:1.35; }
+@media(min-width:1024px){ .h2{ font-size:24px; } }
+.subtitle{ font-size:16px; color:var(--color-text-secondary); }
+.text-aux{ font-size:12px; color:var(--color-text-secondary); }
+.text-secondary{ color:var(--color-text-secondary); }
+.mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+
+/* ---------- Layout shell ---------- */
+#authScreen{ min-height:100%; display:flex; align-items:center; justify-content:center; padding:var(--space-6); background:linear-gradient(180deg,#F8FAFC 0%,#F1F5F9 100%); }
+.auth-card{ width:100%; max-width:400px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:var(--space-8); }
+.auth-brand{ display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-6); }
+.auth-brand-mark{ width:36px; height:36px; border-radius:var(--radius-sm); background:var(--color-primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex-shrink:0; }
+.auth-brand-name{ font-weight:700; font-size:16px; color:var(--color-text); }
+.auth-brand-sub{ font-size:11px; color:var(--color-text-secondary); letter-spacing:.02em; }
+
+#appShell{ display:none; min-height:100%; }
+#appShell.is-active{ display:block; }
+#authScreen.is-hidden{ display:none; }
+
+.sidebar{
+  position:fixed; top:0; left:0; bottom:0; width:var(--sidebar-w);
+  background:var(--color-surface); border-right:1px solid var(--color-border);
+  display:flex; flex-direction:column; z-index:40; transition:transform var(--transition-base);
+}
+.sidebar-brand{ display:flex; align-items:center; gap:var(--space-2); padding:0 var(--space-4); height:var(--header-h); border-bottom:1px solid var(--color-border); flex-shrink:0; cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; }
+.nav{ flex:1; overflow-y:auto; padding:var(--space-3); display:flex; flex-direction:column; gap:2px; }
+.nav-item{ display:flex; align-items:center; gap:var(--space-3); padding:10px var(--space-3); border-radius:var(--radius-sm); color:var(--color-text-secondary); font-size:14px; font-weight:500; cursor:pointer; border:none; background:none; width:100%; text-align:left; }
+.nav-item svg{ width:18px; height:18px; flex-shrink:0; }
+.nav-item:hover{ background:var(--color-bg); color:var(--color-text); }
+.nav-item.is-active{ background:var(--color-primary-light); color:var(--color-primary-dark); font-weight:600; }
+.nav-footer{ padding:var(--space-3); border-top:1px solid var(--color-border); }
+
+.topbar{
+  position:sticky; top:0; z-index:30; height:var(--header-h); background:var(--color-surface);
+  border-bottom:1px solid var(--color-border); display:flex; align-items:center; gap:var(--space-4);
+  padding:0 var(--space-6); margin-left:var(--sidebar-w);
+}
+.topbar-menu-btn{ display:none; }
+.breadcrumbs{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--color-text-secondary); flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.breadcrumbs a{ color:var(--color-text-secondary); }
+.breadcrumbs a:hover{ color:var(--color-primary); }
+.breadcrumbs .current{ color:var(--color-text); font-weight:600; }
+.topbar-search{ position:relative; width:240px; flex-shrink:0; }
+.topbar-search input{ width:100%; }
+.topbar-user{ display:flex; align-items:center; gap:var(--space-2); flex-shrink:0; padding-left:var(--space-3); border-left:1px solid var(--color-border); }
+.topbar-user-avatar{ width:30px; height:30px; border-radius:50%; background:var(--color-primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+.topbar-user-meta{ line-height:1.2; }
+.topbar-user-name{ font-size:13px; font-weight:600; }
+.topbar-user-role{ font-size:11px; color:var(--color-text-secondary); }
+
+main.content{ margin-left:var(--sidebar-w); max-width:calc(var(--content-max) + var(--sidebar-w)); padding:var(--space-6) var(--space-8) var(--space-12); }
+
+.view{ display:none; }
+.view.is-active{ display:block; animation:fadein var(--transition-base); }
+@keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+.page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-4); margin-bottom:var(--space-6); flex-wrap:wrap; }
+.page-head-title{ display:flex; flex-direction:column; gap:2px; }
+
+.decision-support-banner{
+  display:flex; align-items:center; gap:var(--space-2); background:var(--color-info-bg); color:#1E3A8A;
+  border:1px solid #BFDBFE; border-radius:var(--radius-sm); padding:10px var(--space-4); font-size:12.5px; margin-bottom:var(--space-6);
+}
+.decision-support-banner svg{ width:16px; height:16px; flex-shrink:0; color:var(--color-info); }
+
+/* ---------- Cards / grid ---------- */
+.card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
+.card-pad{ padding:var(--space-6); }
+.grid{ display:grid; gap:var(--space-6); }
+.grid-4{ grid-template-columns:repeat(4,1fr); }
+.grid-2{ grid-template-columns:repeat(2,1fr); }
+@media(max-width:1023px){ .grid-4{ grid-template-columns:repeat(2,1fr); } }
+@media(max-width:639px){ .grid-4,.grid-2{ grid-template-columns:1fr; } }
+
+.stat-card{ padding:var(--space-4) var(--space-6); display:flex; flex-direction:column; gap:6px; }
+.stat-card-top{ display:flex; align-items:center; justify-content:space-between; }
+.stat-icon{ width:32px; height:32px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; }
+.stat-icon svg{ width:16px; height:16px; }
+.stat-value{ font-size:28px; font-weight:700; }
+.stat-label{ font-size:12.5px; color:var(--color-text-secondary); }
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  height:38px; padding:0 16px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;
+  border:1px solid transparent; cursor:pointer; transition:background var(--transition-fast),border-color var(--transition-fast),color var(--transition-fast),box-shadow var(--transition-fast);
+  white-space:nowrap;
+}
+.btn svg{ width:15px; height:15px; }
+.btn-primary{ background:var(--color-primary); color:#fff; }
+.btn-primary:hover{ background:var(--color-primary-dark); }
+.btn-primary:focus-visible{ box-shadow:0 0 0 3px var(--color-primary-light); }
+.btn-primary:active{ background:var(--color-primary-dark); transform:translateY(1px); }
+.btn-secondary{ background:var(--color-surface); color:var(--color-text); border-color:var(--color-border); }
+.btn-secondary:hover{ background:var(--color-bg); border-color:#CBD5E1; }
+.btn-secondary:active{ transform:translateY(1px); }
+.btn-ghost{ background:transparent; color:var(--color-text-secondary); }
+.btn-ghost:hover{ background:var(--color-bg); color:var(--color-text); }
+.btn-danger{ background:var(--color-critical); color:#fff; }
+.btn-danger:hover{ background:#B91C1C; }
+.btn:disabled,.btn.is-disabled{ opacity:.5; cursor:not-allowed; pointer-events:none; }
+.btn.is-loading{ position:relative; color:transparent !important; pointer-events:none; }
+.btn.is-loading::after{
+  content:""; position:absolute; width:15px; height:15px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.5); border-top-color:#fff; animation:spin .7s linear infinite;
+}
+.btn-secondary.is-loading::after{ border-color:rgba(15,23,42,.2); border-top-color:var(--color-text); }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.btn-sm{ height:32px; padding:0 12px; font-size:12.5px; }
+.btn-icon{ width:34px; height:34px; padding:0; }
+.btn-block{ width:100%; }
+
+/* ---------- Form fields ---------- */
+.field{ display:flex; flex-direction:column; gap:6px; margin-bottom:var(--space-4); }
+.field-label{ font-size:13px; font-weight:600; color:var(--color-text); }
+.field-help{ font-size:12px; color:var(--color-text-secondary); }
+.field-error{ font-size:12px; color:var(--color-critical); display:none; align-items:center; gap:4px; }
+.field.has-error .field-error{ display:flex; }
+.field.has-error input,.field.has-error select{ border-color:var(--color-critical); }
+input[type=text],input[type=email],input[type=password],input[type=search],select,textarea{
+  width:100%; height:40px; border:1px solid var(--color-border); border-radius:var(--radius-sm);
+  padding:0 var(--space-3); font-size:14px; font-family:inherit; color:var(--color-text); background:var(--color-surface);
+  transition:border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+textarea{ height:auto; padding:var(--space-3); min-height:80px; resize:vertical; }
+input:hover,select:hover{ border-color:#CBD5E1; }
+input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--color-primary); box-shadow:0 0 0 3px var(--color-primary-light); }
+input:disabled,select:disabled{ background:var(--color-bg); color:var(--color-text-secondary); cursor:not-allowed; }
+.input-with-icon{ position:relative; }
+.input-with-icon svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--color-text-secondary); pointer-events:none; }
+.input-with-icon input{ padding-left:34px; }
+
+/* ---------- Badges ---------- */
+.badge{ display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.badge-dot{ width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.badge-low{ background:var(--color-low-bg); color:var(--color-low); }
+.badge-medium{ background:var(--color-medium-bg); color:var(--color-medium-text); }
+.badge-high{ background:var(--color-high-bg); color:var(--color-high-text); }
+.badge-critical{ background:var(--color-critical-bg); color:var(--color-critical-text); }
+.badge-neutral{ background:var(--color-bg); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+.badge-info{ background:var(--color-info-bg); color:var(--color-info); }
+
+.priority-border-low{ border-left:3px solid var(--color-low); }
+.priority-border-medium{ border-left:3px solid var(--color-medium); }
+.priority-border-high{ border-left:3px solid var(--color-high); }
+.priority-border-critical{ border-left:3px solid var(--color-critical); }
+
+/* ---------- Table ---------- */
+.table-wrap{ overflow-x:auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface); }
+table{ width:100%; border-collapse:collapse; min-width:720px; }
+thead th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-secondary); font-weight:600; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--color-border); background:var(--color-bg); }
+tbody td{ padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--color-border); font-size:13.5px; vertical-align:middle; height:52px; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr{ cursor:pointer; transition:background var(--transition-fast); }
+tbody tr:hover{ background:var(--color-bg); }
+tbody tr:focus-visible{ outline:2px solid var(--color-primary); outline-offset:-2px; }
+.td-primary{ font-weight:600; }
+.truncate{ max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---------- Filters ---------- */
+.filters-bar{ display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; margin-bottom:var(--space-4); }
+.chip-group{ display:flex; gap:6px; flex-wrap:wrap; }
+.chip{ display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--color-border); background:var(--color-surface); font-size:12.5px; font-weight:600; color:var(--color-text-secondary); cursor:pointer; }
+.chip:hover{ border-color:#CBD5E1; }
+.chip.is-active{ background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+.chip[data-p=LOW].is-active{ background:var(--color-low); border-color:var(--color-low); }
+.chip[data-p=MEDIUM].is-active{ background:var(--color-medium-solid); border-color:var(--color-medium-solid); }
+.chip[data-p=HIGH].is-active{ background:var(--color-high-solid); border-color:var(--color-high-solid); }
+.chip[data-p=CRITICAL].is-active{ background:var(--color-critical); border-color:var(--color-critical); }
+
+/* ---------- Pagination ---------- */
+.pagination{ display:flex; align-items:center; justify-content:space-between; padding:var(--space-4); flex-wrap:wrap; gap:var(--space-3); }
+.pagination-pages{ display:flex; gap:4px; }
+.page-btn{ width:32px; height:32px; border-radius:var(--radius-sm); border:1px solid var(--color-border); background:var(--color-surface); font-size:12.5px; font-weight:600; cursor:pointer; color:var(--color-text-secondary); }
+.page-btn:hover{ background:var(--color-bg); }
+.page-btn.is-active{ background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+
+/* ---------- Empty / skeleton ---------- */
+.empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:var(--space-12) var(--space-6); color:var(--color-text-secondary); gap:var(--space-3); }
+.empty-state svg{ width:40px; height:40px; opacity:.5; }
+.skeleton{ background:linear-gradient(90deg,#EEF2F6 25%,#F6F8FA 37%,#EEF2F6 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:var(--radius-sm); }
+@keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:0 0;} }
+.skeleton-row{ height:52px; border-bottom:1px solid var(--color-border); display:flex; align-items:center; padding:0 var(--space-4); gap:var(--space-4); }
+.skeleton-row .skeleton{ height:14px; }
+
+/* ---------- Alert detail: story blocks ---------- */
+.detail-grid{ display:grid; grid-template-columns:1fr 320px; gap:var(--space-6); align-items:start; }
+@media(max-width:1023px){ .detail-grid{ grid-template-columns:1fr; } }
+.story{ display:flex; flex-direction:column; gap:var(--space-6); }
+.block-title{ display:flex; align-items:center; gap:8px; margin-bottom:var(--space-3); }
+.block-title svg{ width:17px; height:17px; color:var(--color-primary); }
+.block-title h2{ font-size:16px; font-weight:700; }
+.block-num{ width:22px; height:22px; border-radius:50%; background:var(--color-primary-light); color:var(--color-primary-dark); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+.hero-card{ padding:var(--space-6); }
+.hero-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-4); }
+.hero-patient{ font-size:13px; color:var(--color-text-secondary); margin-bottom:4px; }
+.hero-metrics{ display:flex; gap:var(--space-6); flex-wrap:wrap; margin:var(--space-4) 0; padding:var(--space-4) 0; border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
+.hero-metric-label{ font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:.03em; margin-bottom:2px; }
+.hero-metric-value{ font-size:20px; font-weight:700; }
+.hero-headline{ font-size:15px; line-height:1.6; }
+.disclaimer{ display:flex; align-items:flex-start; gap:8px; font-size:12px; color:#92400E; background:#FFFBEB; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:10px 12px; margin-top:var(--space-4); }
+.disclaimer svg{ width:15px; height:15px; flex-shrink:0; margin-top:1px; color:#B45309; }
+
+.flow-strip{ display:flex; border:1px solid var(--color-border); border-radius:var(--radius-lg); overflow:hidden; background:var(--color-surface); margin-bottom:var(--space-6); }
+.flow-step{ flex:1; padding:10px 6px; text-align:center; font-size:11px; font-weight:600; color:var(--color-text-secondary); border-right:1px solid var(--color-border); cursor:pointer; position:relative; }
+.flow-step:last-child{ border-right:none; }
+.flow-step:hover{ background:var(--color-bg); color:var(--color-text); }
+.flow-step-num{ display:block; font-size:10px; color:var(--color-primary); margin-bottom:2px; }
+@media(max-width:767px){ .flow-strip{ flex-wrap:wrap; } .flow-step{ flex:1 1 33%; border-bottom:1px solid var(--color-border); } }
+
+.factor-row{ display:grid; grid-template-columns:auto 1fr auto; gap:var(--space-4); align-items:center; padding:var(--space-4) 0; border-bottom:1px solid var(--color-border); }
+.factor-row:last-child{ border-bottom:none; }
+.factor-dir{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--color-bg); flex-shrink:0; }
+.factor-dir svg{ width:15px; height:15px; }
+.factor-name{ font-weight:600; font-size:13.5px; }
+.factor-code{ font-size:11px; color:var(--color-text-secondary); font-family:ui-monospace,monospace; }
+.factor-explain{ font-size:12.5px; color:var(--color-text-secondary); margin-top:3px; line-height:1.5; }
+.factor-meta{ display:flex; gap:var(--space-6); margin-top:6px; flex-wrap:wrap; }
+.factor-meta-item{ font-size:11.5px; color:var(--color-text-secondary); }
+.factor-meta-item b{ color:var(--color-text); font-weight:600; }
+.influence-badge{ text-align:right; white-space:nowrap; }
+
+.view-toggle{ display:inline-flex; border:1px solid var(--color-border); border-radius:var(--radius-sm); overflow:hidden; }
+.view-toggle button{ border:none; background:var(--color-surface); padding:6px 14px; font-size:12.5px; font-weight:600; color:var(--color-text-secondary); cursor:pointer; }
+.view-toggle button.is-active{ background:var(--color-primary); color:#fff; }
+
+.tech-panel{ display:none; margin-top:var(--space-4); padding:var(--space-4); background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius-sm); }
+.tech-panel.is-open{ display:block; }
+.tech-row{ display:flex; justify-content:space-between; gap:var(--space-4); padding:6px 0; border-bottom:1px dashed var(--color-border); font-size:12px; }
+.tech-row:last-child{ border-bottom:none; }
+.tech-row span:first-child{ color:var(--color-text-secondary); }
+.tech-row span:last-child{ font-family:ui-monospace,monospace; text-align:right; }
+
+.chart-card{ margin-bottom:var(--space-4); }
+.chart-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:var(--space-2); flex-wrap:wrap; gap:6px; }
+.chart-title{ font-size:13.5px; font-weight:600; }
+.chart-meta{ font-size:11.5px; color:var(--color-text-secondary); }
+.chart-svg-wrap{ width:100%; overflow-x:auto; }
+.chart-explain{ font-size:12.5px; color:var(--color-text-secondary); margin-top:var(--space-2); line-height:1.5; }
+
+.pattern-card{ display:flex; gap:var(--space-4); align-items:flex-start; }
+.pattern-icon{ width:44px; height:44px; border-radius:var(--radius-md); background:var(--color-primary-light); color:var(--color-primary-dark); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pattern-icon svg{ width:22px; height:22px; }
+
+.why-card{ border:1px solid var(--color-border); border-top:3px solid var(--color-primary); }
+.why-score-row{ display:flex; gap:var(--space-8); margin-bottom:var(--space-4); flex-wrap:wrap; }
+.why-score{ text-align:left; }
+.why-score-value{ font-size:26px; font-weight:700; }
+.why-score-label{ font-size:11.5px; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:.03em; }
+.factor-list{ display:flex; flex-direction:column; gap:8px; margin:var(--space-2) 0 var(--space-4); }
+.factor-list-item{ display:flex; gap:8px; font-size:13px; line-height:1.5; }
+.factor-list-item svg{ width:15px; height:15px; flex-shrink:0; margin-top:2px; }
+.factor-list-item.up svg{ color:var(--color-high); }
+.factor-list-item.down svg{ color:var(--color-low); }
+.why-rule{ font-size:12px; color:var(--color-text-secondary); background:var(--color-bg); border-radius:var(--radius-sm); padding:10px 12px; margin-top:var(--space-3); }
+.why-summary{ font-size:14px; line-height:1.6; margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--color-border); }
+
+/* Trazabilidad waterfall */
+.trace-tree{ display:flex; flex-direction:column; gap:0; }
+.trace-alert-node{ display:flex; align-items:center; gap:10px; padding:var(--space-3) var(--space-4); background:var(--color-primary); color:#fff; border-radius:var(--radius-sm); font-weight:600; font-size:13px; margin-bottom:var(--space-3); }
+.trace-alert-node svg{ width:16px; height:16px; }
+.trace-factor{ margin-left:var(--space-6); border-left:2px solid var(--color-border); padding-left:var(--space-4); margin-bottom:var(--space-3); position:relative; }
+.trace-factor::before{ content:""; position:absolute; left:-6px; top:14px; width:10px; height:10px; border-radius:50%; background:var(--color-surface); border:2px solid var(--color-primary); }
+.trace-factor-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); cursor:pointer; padding:8px 0; }
+.trace-factor-head-left{ display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px; }
+.trace-evidences{ display:none; flex-direction:column; gap:8px; padding:4px 0 var(--space-3); }
+.trace-evidences.is-open{ display:flex; }
+.trace-evidence{ background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:var(--space-3); display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px 16px; }
+.trace-evidence-field{ font-size:11.5px; }
+.trace-evidence-field span{ display:block; }
+.trace-evidence-field .k{ color:var(--color-text-secondary); margin-bottom:2px; }
+.trace-evidence-field .v{ font-weight:600; }
+.timeline-mini{ display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--color-text-secondary); margin-top:8px; flex-wrap:wrap; }
+.timeline-dot{ width:7px; height:7px; border-radius:50%; }
+.timeline-dot.event{ background:var(--color-info); }
+.timeline-dot.avail{ background:var(--color-primary); }
+
+/* Tooltip */
+[data-tip]{ position:relative; }
+[data-tip]::after{
+  content:attr(data-tip); position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--color-text); color:#fff; font-size:11.5px; font-weight:500; padding:6px 10px; border-radius:6px;
+  white-space:normal; width:max-content; max-width:240px; opacity:0; pointer-events:none; transition:opacity var(--transition-fast); z-index:60; line-height:1.4;
+}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{ opacity:1; }
+
+/* Sidebar aside on detail */
+.aside-card{ margin-bottom:var(--space-4); }
+.aside-card h3{ font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--color-text-secondary); margin-bottom:var(--space-3); }
+.action-group{ display:flex; flex-direction:column; gap:8px; }
+.review-select{ margin-bottom:var(--space-3); }
+.history-item{ font-size:12px; padding:var(--space-3) 0; border-bottom:1px solid var(--color-border); }
+.history-item:last-child{ border-bottom:none; }
+.history-item-top{ display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px; }
+.history-item-meta{ color:var(--color-text-secondary); }
+
+/* ---------- Modal ---------- */
+.modal-backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:center; justify-content:center; z-index:100; padding:var(--space-4); }
+.modal-backdrop.is-open{ display:flex; }
+.modal{ background:var(--color-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); width:100%; max-width:440px; padding:var(--space-6); }
+.modal h3{ font-size:17px; font-weight:700; margin-bottom:var(--space-2); }
+.modal p{ font-size:13.5px; color:var(--color-text-secondary); line-height:1.5; margin-bottom:var(--space-4); }
+.modal-actions{ display:flex; justify-content:flex-end; gap:var(--space-3); margin-top:var(--space-6); }
+@media(max-width:639px){ .modal-backdrop{ align-items:flex-end; padding:0; } .modal{ max-width:none; border-radius:var(--radius-lg) var(--radius-lg) 0 0; } }
+
+/* ---------- Toast ---------- */
+#toastRegion{ position:fixed; bottom:var(--space-6); right:var(--space-6); z-index:120; display:flex; flex-direction:column; gap:10px; max-width:340px; }
+.toast{ background:var(--color-text); color:#fff; border-radius:var(--radius-sm); padding:12px 14px; font-size:13px; box-shadow:var(--shadow-md); display:flex; align-items:flex-start; gap:8px; animation:toast-in var(--transition-base); }
+.toast svg{ width:16px; height:16px; flex-shrink:0; margin-top:1px; color:var(--color-low); }
+.toast.toast-info svg{ color:#93C5FD; }
+@keyframes toast-in{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
+
+/* Demo mode checklist */
+#demoPanel{ position:fixed; bottom:var(--space-6); left:calc(var(--sidebar-w) + var(--space-6)); z-index:90; width:280px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); display:none; }
+#demoPanel.is-open{ display:block; }
+.demo-head{ display:flex; align-items:center; justify-content:space-between; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--color-border); }
+.demo-head span{ font-weight:700; font-size:13px; }
+.demo-list{ padding:var(--space-3) var(--space-4); max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+.demo-step{ display:flex; align-items:flex-start; gap:8px; font-size:12px; line-height:1.4; color:var(--color-text-secondary); }
+.demo-step-check{ width:16px; height:16px; border-radius:50%; border:2px solid var(--color-border); flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; }
+.demo-step.done{ color:var(--color-text); text-decoration:line-through; }
+.demo-step.done .demo-step-check{ background:var(--color-primary); border-color:var(--color-primary); }
+.demo-step.done .demo-step-check svg{ width:10px; height:10px; color:#fff; }
+
+/* Config / profile / patients simple pages */
+.settings-section{ margin-bottom:var(--space-6); }
+.settings-row{ display:flex; align-items:center; justify-content:space-between; padding:var(--space-4) 0; border-bottom:1px solid var(--color-border); gap:var(--space-4); }
+.settings-row:last-child{ border-bottom:none; }
+.settings-row-label{ font-weight:600; font-size:13.5px; }
+.settings-row-help{ font-size:12px; color:var(--color-text-secondary); margin-top:2px; }
+.switch{ position:relative; width:40px; height:22px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; position:absolute; }
+.switch-track{ position:absolute; inset:0; background:var(--color-border); border-radius:999px; cursor:pointer; transition:background var(--transition-fast); }
+.switch-track::after{ content:""; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform var(--transition-fast); box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.switch input:checked + .switch-track{ background:var(--color-primary); }
+.switch input:checked + .switch-track::after{ transform:translateX(18px); }
+.switch input:focus-visible + .switch-track{ outline:2px solid var(--color-primary); outline-offset:2px; }
+
+.patient-card{ display:flex; align-items:center; gap:var(--space-4); padding:var(--space-4); cursor:pointer; }
+.patient-avatar{ width:40px; height:40px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:var(--color-text-secondary); flex-shrink:0; }
+
+/* Mobile */
+.mobile-overlay{ display:none; position:fixed; inset:0; background:rgba(15,23,42,.4); z-index:39; }
+.mobile-overlay.is-open{ display:block; }
+@media(max-width:1023px){
+  .sidebar{ transform:translateX(-100%); }
+  .sidebar.is-open{ transform:translateX(0); box-shadow:var(--shadow-md); }
+  .topbar{ margin-left:0; padding:0 var(--space-4); }
+  main.content{ margin-left:0; padding:var(--space-4); }
+  .topbar-menu-btn{ display:flex; }
+  .topbar-search{ display:none; }
+  #demoPanel{ left:var(--space-4); right:var(--space-4); width:auto; }
+  .table-wrap{ display:none; }
+  .cards-mobile{ display:flex; flex-direction:column; gap:var(--space-3); }
+}
+@media(min-width:1024px){ .cards-mobile{ display:none; } }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-brand-mark">HS</div>
+      <div>
+        <div class="auth-brand-name">HealthSignal LATAM</div>
+        <div class="auth-brand-sub">RED INTEGRADA DE SALUD ANDINA</div>
+      </div>
+    </div>
+    <h1 class="h2" style="margin-bottom:4px;">Iniciar sesión</h1>
+    <p class="text-secondary" style="margin-bottom:var(--space-6); font-size:13px;">Acceso para personal de salud autorizado.</p>
+    <form id="loginForm" novalidate>
+      <div class="field" id="fieldEmail">
+        <label class="field-label" for="loginEmail">Correo institucional</label>
+        <input type="email" id="loginEmail" autocomplete="username" placeholder="nombre@risa-latam.org" value="dra.rojas@risa-latam.org">
+        <span class="field-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Ingresa un correo válido.</span>
+      </div>
+      <div class="field" id="fieldPassword">
+        <label class="field-label" for="loginPassword">Contraseña</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••" value="demo1234">
+        <span class="field-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>La contraseña es obligatoria.</span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn" style="margin-top:var(--space-2);">Iniciar sesión</button>
+    </form>
+    <p class="text-aux" style="margin-top:var(--space-4); line-height:1.5;">
+      Herramienta de apoyo a la decisión clínica. Esta plataforma no constituye diagnóstico ni reemplaza la evaluación del profesional de salud.
+    </p>
+  </div>
+</section>
+
+<!-- ============ APP SHELL ============ -->
+<div id="appShell">
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-brand" data-nav="dashboard" aria-label="Ir al inicio">
+      <div class="auth-brand-mark" style="width:30px;height:30px;font-size:12px;">HS</div>
+      <div>
+        <div class="auth-brand-name" style="font-size:13.5px;">HealthSignal</div>
+        <div class="auth-brand-sub" style="font-size:10px;">LATAM</div>
+      </div>
+    </button>
+    <nav class="nav" aria-label="Navegación principal">
+      <button class="nav-item" data-nav="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>Inicio</button>
+      <button class="nav-item" data-nav="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alertas</button>
+      <button class="nav-item" data-nav="patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pacientes</button>
+      <button class="nav-item" data-nav="followup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Seguimiento</button>
+      <button class="nav-item" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>Configuración</button>
+      <button class="nav-item" data-nav="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button>
+    </nav>
+    <div class="nav-footer">
+      <label class="settings-row" style="padding:8px 4px; border:none; cursor:pointer;">
+        <span class="text-aux" style="font-weight:600; color:var(--color-text);">Modo demo</span>
+        <span class="switch"><input type="checkbox" id="demoModeToggle"><span class="switch-track"></span></span>
+      </label>
+      <button class="nav-item" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <button class="btn btn-icon btn-ghost topbar-menu-btn" id="menuToggleBtn" aria-label="Abrir menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <nav class="breadcrumbs" id="breadcrumbs" aria-label="Miga de pan"></nav>
+    <div class="topbar-search input-with-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="globalSearch" placeholder="Buscar paciente o señal…" aria-label="Buscar">
+    </div>
+    <div class="topbar-user">
+      <div class="topbar-user-avatar">DR</div>
+      <div class="topbar-user-meta">
+        <div class="topbar-user-name">Dra. Rojas</div>
+        <div class="topbar-user-role">Personal de salud</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view" id="view-dashboard">
+      <div class="decision-support-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Herramienta de apoyo a la decisión. Las alertas no constituyen diagnóstico ni reemplazan la evaluación del profesional de salud.
+      </div>
+      <div class="page-head">
+        <div class="page-head-title">
+          <h1 class="h1">Inicio</h1>
+          <p class="subtitle">Resumen de señales de riesgo — Red Integrada de Salud Andina</p>
+        </div>
+      </div>
+      <div class="grid grid-4" id="statCards" style="margin-bottom:var(--space-6);"></div>
+      <div class="grid grid-2" style="margin-bottom:var(--space-6); align-items:start;">
+        <div class="card card-pad chart-card">
+          <div class="chart-head"><span class="chart-title">Alertas por prioridad</span><span class="chart-meta">Últimos 8 días · conteo</span></div>
+          <div class="chart-svg-wrap" id="chartPriority"></div>
+        </div>
+        <div class="card card-pad chart-card">
+          <div class="chart-head"><span class="chart-title">Alertas detectadas por día</span><span class="chart-meta">20–27 ago. 2026</span></div>
+          <div class="chart-svg-wrap" id="chartPerDay"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-pad" style="padding-bottom:0;"><h2 class="h2" style="font-size:15px;">Alertas recientes</h2></div>
+        <div id="recentAlertsList"></div>
+      </div>
+    </section>
+
+    <!-- ============ ALERTAS ============ -->
+    <section class="view" id="view-alerts">
+      <div class="page-head">
+        <div class="page-head-title">
+          <h1 class="h1">Alertas</h1>
+          <p class="subtitle">Señales priorizadas — ordenadas por relevancia clínica</p>
+        </div>
+      </div>
+      <div class="filters-bar">
+        <div class="chip-group" id="priorityFilters">
+          <button class="chip is-active" data-p="ALL">Todas</button>
+          <button class="chip" data-p="CRITICAL">Crítica</button>
+          <button class="chip" data-p="HIGH">Alta</button>
+          <button class="chip" data-p="MEDIUM">Media</button>
+          <button class="chip" data-p="LOW">Baja</button>
+        </div>
+        <div class="input-with-icon" style="width:240px; margin-left:auto;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="alertSearch" placeholder="Buscar por paciente…">
+        </div>
+        <select id="alertSort" style="width:180px;">
+          <option value="priority">Ordenar: prioridad</option>
+          <option value="recent">Ordenar: más reciente</option>
+          <option value="risk">Ordenar: puntaje de riesgo</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Prioridad</th><th>Paciente</th><th>Explicación</th><th>Detectada</th><th>Estado</th></tr></thead>
+          <tbody id="alertsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="cards-mobile" id="alertsCardsMobile"></div>
+      <div class="card" style="margin-top:var(--space-4); border:none; box-shadow:none;">
+        <div class="pagination" id="alertsPagination"></div>
+      </div>
+    </section>
+
+    <!-- ============ DETALLE DE ALERTA ============ -->
+    <section class="view" id="view-alertDetail"></section>
+
+    <!-- ============ PACIENTES ============ -->
+    <section class="view" id="view-patients">
+      <div class="page-head">
+        <div class="page-head-title">
+          <h1 class="h1">Pacientes</h1>
+          <p class="subtitle">Pacientes con señales registradas en la cohorte de monitoreo</p>
+        </div>
+      </div>
+      <div class="card" id="patientsList"></div>
+    </section>
+
+    <!-- ============ FICHA DE PACIENTE ============ -->
+    <section class="view" id="view-patientDetail"></section>
+
+    <!-- ============ SEGUIMIENTO ============ -->
+    <section class="view" id="view-followup">
+      <div class="page-head">
+        <div class="page-head-title">
+          <h1 class="h1">Seguimiento</h1>
+          <p class="subtitle">Alertas marcadas para seguimiento o escaladas según protocolo</p>
+        </div>
+      </div>
+      <div class="card" id="followupList"></div>
+    </section>
+
+    <!-- ============ PERFIL ============ -->
+    <section class="view" id="view-profile">
+      <div class="page-head"><div class="page-head-title"><h1 class="h1">Perfil</h1><p class="subtitle">Información de la cuenta</p></div></div>
+      <div class="card card-pad" style="max-width:520px;">
+        <div style="display:flex; align-items:center; gap:var(--space-4); margin-bottom:var(--space-6);">
+          <div class="topbar-user-avatar" style="width:56px;height:56px;font-size:18px;">DR</div>
+          <div>
+            <div style="font-weight:700; font-size:16px;">Dra. Rojas</div>
+            <div class="text-secondary" style="font-size:13px;">Personal de salud · Programa de monitoreo domiciliario</div>
+          </div>
+        </div>
+        <div class="settings-row"><div><div class="settings-row-label">Correo institucional</div><div class="settings-row-help">dra.rojas@risa-latam.org</div></div></div>
+        <div class="settings-row"><div><div class="settings-row-label">Centro asignado</div><div class="settings-row-help">Red Integrada de Salud Andina — Nodo central</div></div></div>
+        <div class="settings-row">
+          <div><div class="settings-row-label">Reducir movimiento en pantalla</div><div class="settings-row-help">Respeta la preferencia del sistema (prefers-reduced-motion) automáticamente.</div></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:var(--space-4);" id="profileLogoutBtn">Cerrar sesión</button>
+      </div>
+    </section>
+
+    <!-- ============ CONFIGURACIÓN ============ -->
+    <section class="view" id="view-settings">
+      <div class="page-head"><div class="page-head-title"><h1 class="h1">Configuración</h1><p class="subtitle">Preferencias del prototipo — los cambios se guardan solo en este dispositivo</p></div></div>
+
+      <div class="card card-pad settings-section">
+        <h2 class="h2" style="font-size:15px; margin-bottom:var(--space-2);">Notificaciones</h2>
+        <div class="settings-row">
+          <div><div class="settings-row-label">Alertas críticas</div><div class="settings-row-help">Notificar de inmediato ante una nueva alerta con prioridad crítica.</div></div>
+          <label class="switch"><input type="checkbox" checked data-setting="notifCritical"><span class="switch-track"></span></label>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-row-label">Resumen diario</div><div class="settings-row-help">Recibir un resumen de alertas al inicio de cada turno.</div></div>
+          <label class="switch"><input type="checkbox" data-setting="notifDaily"><span class="switch-track"></span></label>
+        </div>
+      </div>
+
+      <div class="card card-pad settings-section">
+        <h2 class="h2" style="font-size:15px; margin-bottom:var(--space-2);">Preferencias de visualización</h2>
+        <div class="settings-row">
+          <div><div class="settings-row-label">Vista predeterminada del detalle de alerta</div><div class="settings-row-help">La vista sencilla es la recomendada para uso clínico diario.</div></div>
+          <select style="width:180px;" data-setting="defaultView"><option value="simple" selected>Vista sencilla</option><option value="technical">Detalles técnicos</option></select>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-row-label">Densidad de tablas</div><div class="settings-row-help">Altura de fila en listados de alertas.</div></div>
+          <select style="width:180px;" data-setting="density"><option value="comfortable" selected>Intermedia (recomendada)</option><option value="compact">Compacta</option></select>
+        </div>
+      </div>
+
+      <div class="card card-pad settings-section">
+        <h2 class="h2" style="font-size:15px; margin-bottom:2px;">Umbrales del motor de detección</h2>
+        <p class="text-aux" style="margin-bottom:var(--space-3);">Definidos por el motor de reglas + Isolation Forest del pipeline (notebook 3). No editables desde este prototipo — se muestran solo como referencia.</p>
+        <div class="settings-row"><div class="settings-row-label">Prioridad crítica</div><span class="badge badge-critical"><span class="badge-dot"></span>risk_score ≥ 0.80</span></div>
+        <div class="settings-row"><div class="settings-row-label">Prioridad alta</div><span class="badge badge-high"><span class="badge-dot"></span>0.55 ≤ risk_score &lt; 0.80</span></div>
+        <div class="settings-row"><div class="settings-row-label">Prioridad media</div><span class="badge badge-medium"><span class="badge-dot"></span>0.30 ≤ risk_score &lt; 0.55</span></div>
+        <div class="settings-row"><div class="settings-row-label">Prioridad baja</div><span class="badge badge-low"><span class="badge-dot"></span>risk_score &lt; 0.30</span></div>
+      </div>
+
+      <div class="card card-pad settings-section">
+        <h2 class="h2" style="font-size:15px; margin-bottom:var(--space-2);">Cuenta</h2>
+        <div class="settings-row"><div class="settings-row-label">Correo institucional</div><div class="settings-row-help">dra.rojas@risa-latam.org</div></div>
+        <div class="settings-row"><div><div class="settings-row-label">Restablecer datos locales del prototipo</div><div class="settings-row-help">Borra el historial de atención simulado guardado en este navegador.</div></div><button class="btn btn-secondary btn-sm" id="resetLocalDataBtn">Restablecer</button></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">Confirmar acción</h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modalCancelBtn">Cancelar</button>
+      <button class="btn btn-danger" id="modalConfirmBtn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="demoPanel">
+  <div class="demo-head">
+    <span>Modo demo · recorrido guiado</span>
+    <button class="btn btn-icon btn-ghost btn-sm" id="demoCloseBtn" aria-label="Cerrar panel de demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="demo-list" id="demoList"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   HEALTHSIGNAL LATAM — CASCARÓN DE CONSOLA CLÍNICA (prototipo)
+   Vanilla JS, sin frameworks, un solo archivo, funciona offline
+   tras la primera carga (no depende de red salvo Google Fonts,
+   que ya se degrada a la pila de fuentes del sistema).
+   Toda la data es SIMULADA — no proviene de RISA real.
+   ============================================================ */
+
+/* ---------- Backend HealthSignal LATAM (FastAPI + Gemini) ---------- */
+const API_BASE = window.HS_API_BASE || "http://127.0.0.1:8000";
+
+/* SIGNALS_DATA se puebla desde /api/signals al arrancar la app (ver loadSignalsData()).
+   SIGNAL_DETAILS_CACHE guarda el detalle completo (con explicación de Gemini) por señal,
+   pedido de forma perezosa la primera vez que se abre cada alerta. */
+let SIGNALS_DATA = [];
+let SIGNAL_DETAILS_CACHE = {};
+let dataSource = "loading"; // "loading" | "live" | "offline_fallback"
+
+async function loadSignalsData(){
+  try{
+    const res = await fetch(`${API_BASE}/api/signals`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    SIGNALS_DATA = await res.json();
+    dataSource = "live";
+  }catch(err){
+    console.warn("No se pudo conectar con el backend de HealthSignal LATAM; usando datos de demostración locales.", err);
+    SIGNALS_DATA = DEMO_FALLBACK_SIGNALS;
+    DEMO_FALLBACK_SIGNALS.forEach(s => { SIGNAL_DETAILS_CACHE[s.id] = s; });
+    dataSource = "offline_fallback";
+  }
+}
+
+async function fetchSignalDetail(id){
+  if(SIGNAL_DETAILS_CACHE[id]) return SIGNAL_DETAILS_CACHE[id];
+  try{
+    const res = await fetch(`${API_BASE}/api/signals/${id}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const detail = await res.json();
+    SIGNAL_DETAILS_CACHE[id] = detail;
+    return detail;
+  }catch(err){
+    console.warn(`No se pudo obtener el detalle de la señal ${id} desde el backend.`, err);
+    return null;
+  }
+}
+
+async function regenerateSignalExplanation(id){
+  const res = await fetch(`${API_BASE}/api/signals/${id}/regenerate`, { method: "POST" });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const detail = await res.json();
+  SIGNAL_DETAILS_CACHE[id] = detail;
+  return detail;
+}
+
+/* ---------- Datos de demostración (fallback offline si el backend no responde) ---------- */
+const DEMO_FALLBACK_SIGNALS = [{"id":"SIG-2001","patientId":"PAT-0655","priority":"CRITICAL","riskScore":0.91,"confidence":0.88,"decisionDatetime":"2026-08-22T00:00:00","evidenceStart":"2026-08-21T18:00:00","evidenceEnd":"2026-08-22T00:00:00","isDemo":true,"headline":"Se identificó un deterioro progresivo en dos indicadores cardiorrespiratorios durante las últimas 6 horas. La combinación y persistencia de estos cambios elevó la prioridad de la alerta a crítica.","whatHappened":"La saturación de oxígeno disminuyó mientras la frecuencia cardiaca aumentó de forma sostenida.","periodRecords":24,"changeStart":"2026-08-21T21:00:00","persistence":"El comportamiento se mantuvo durante las últimas 3 horas de la ventana analizada.","pattern":"Cambios simultáneos en varias variables","patternExplain":"Las dos variables cambiaron en direcciones desfavorables durante el mismo periodo y el comportamiento se mantuvo durante varios registros consecutivos.","increasedFactors":["Dos variables clínicas cambiaron en direcciones desfavorables de forma simultánea.","El comportamiento persistió durante varios registros consecutivos, no fue un valor aislado.","El nivel de actividad física registrado descarta el esfuerzo físico como explicación."],"decreasedFactors":["La cobertura de lecturas en la ventana fue alta (96%), lo que da mayor confianza al resultado."],"dataQualityNote":"Información completa y de buena calidad en la ventana analizada.","generalRule":"Las alertas que combinan cambios simultáneos en variables clínicas relevantes, con persistencia sostenida y buena calidad de datos, reciben prioridad crítica o alta.","priorityReason":"Esta alerta recibió prioridad crítica porque dos variables clínicas relevantes presentaron cambios simultáneos y desfavorables, el comportamiento persistió durante varias horas y las evidencias principales estuvieron disponibles antes del momento de decisión.","variables":[{"code":"SpO2","name":"Saturación de oxígeno","unit":"%","ref":"95–100 %","lastValue":"89 %","direction":"disminuyó","contribution":0.82,"contributionLabel":"Influencia muy alta","explain":"Disminuyó de 96 % a 89 % durante la ventana analizada y permaneció por debajo de su comportamiento reciente.","role":"PRIMARY"},{"code":"HR","name":"Frecuencia cardiaca","unit":"lpm","ref":"60–100 lpm","lastValue":"118 lpm","direction":"aumentó","contribution":0.74,"contributionLabel":"Influencia alta","explain":"Aumentó de forma sostenida desde 82 lpm hasta 118 lpm, superando su variabilidad habitual.","role":"PRIMARY"},{"code":"ACTIVITY_LEVEL","name":"Nivel de actividad","unit":"nivel","ref":"según rutina habitual","lastValue":"Bajo","direction":"se mantuvo estable","contribution":0.15,"contributionLabel":"Influencia baja","explain":"El nivel de actividad física registrado fue bajo, por lo que el cambio no se explica por esfuerzo físico.","role":"CONTEXT"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-118820","variableCode":"SpO2","eventDatetime":"2026-08-21T21:45:00","availableDatetime":"2026-08-21T21:50:00","role":"PRIMARY","contribution":0.82,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-118821","variableCode":"HR","eventDatetime":"2026-08-21T21:45:00","availableDatetime":"2026-08-21T21:50:00","role":"PRIMARY","contribution":0.74,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-118790","variableCode":"SpO2","eventDatetime":"2026-08-21T18:15:00","availableDatetime":"2026-08-21T18:20:00","role":"SUPPORTING","contribution":0.4,"roleLabel":"Evidencia de apoyo"},{"sourceFile":"wearable_observations.csv","recordId":"WOBS-552310","variableCode":"ACTIVITY_LEVEL","eventDatetime":"2026-08-21T20:30:00","availableDatetime":"2026-08-21T20:35:00","role":"CONTEXT","contribution":0.15,"roleLabel":"Información de contexto"}],"patientAge":71,"patientProgram":"Monitoreo domiciliario"},{"id":"SIG-2002","patientId":"PAT-0286","priority":"CRITICAL","riskScore":0.86,"confidence":0.79,"decisionDatetime":"2026-08-23T06:00:00","evidenceStart":"2026-08-22T18:00:00","evidenceEnd":"2026-08-23T06:00:00","isDemo":false,"headline":"Tres indicadores presentaron cambios simultáneos y desfavorables durante las últimas 12 horas, con persistencia en dos ventanas consecutivas.","whatHappened":"La frecuencia cardiaca y la temperatura aumentaron mientras la saturación de oxígeno disminuyó de forma sostenida.","periodRecords":41,"changeStart":"2026-08-22T21:30:00","persistence":"El patrón se mantuvo en las dos ventanas de análisis más recientes (12 horas).","pattern":"Cambios simultáneos en varias variables","patternExplain":"Tres variables cambiaron en la misma dirección de riesgo durante el mismo periodo, con persistencia superior a una ventana de análisis.","increasedFactors":["Tres variables relevantes presentaron cambios simultáneos.","Dos de los cambios persistieron durante varias horas, no fueron puntuales.","Las tres fuentes de evidencia (signos vitales) son independientes entre sí."],"decreasedFactors":[],"dataQualityNote":"Cobertura de lecturas alta (91%) durante toda la ventana.","generalRule":"Tres o más variables relevantes cambiando en la misma dirección de riesgo, de forma persistente, se prioriza como crítica.","priorityReason":"Esta alerta recibió prioridad crítica porque tres variables relevantes presentaron cambios simultáneos, dos de ellos persistieron durante varias horas y las evidencias principales estuvieron disponibles antes del momento de decisión.","variables":[{"code":"SpO2","name":"Saturación de oxígeno","unit":"%","ref":"95–100 %","lastValue":"88 %","direction":"disminuyó","contribution":0.79,"contributionLabel":"Influencia muy alta","explain":"Disminuyó de 97 % a 88 % de forma sostenida en las últimas 12 horas.","role":"PRIMARY"},{"code":"HR","name":"Frecuencia cardiaca","unit":"lpm","ref":"60–100 lpm","lastValue":"121 lpm","direction":"aumentó","contribution":0.71,"contributionLabel":"Influencia alta","explain":"Aumentó de 88 lpm a 121 lpm, manteniéndose elevada en ambas ventanas.","role":"PRIMARY"},{"code":"TEMP","name":"Temperatura corporal","unit":"°C","ref":"36.1–37.2 °C","lastValue":"38.4 °C","direction":"aumentó","contribution":0.58,"contributionLabel":"Influencia alta","explain":"Aumentó de 36.9 °C a 38.4 °C durante el mismo periodo.","role":"PRIMARY"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-220110","variableCode":"SpO2","eventDatetime":"2026-08-22T21:40:00","availableDatetime":"2026-08-22T21:45:00","role":"PRIMARY","contribution":0.79,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-220111","variableCode":"HR","eventDatetime":"2026-08-22T21:40:00","availableDatetime":"2026-08-22T21:45:00","role":"PRIMARY","contribution":0.71,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-220205","variableCode":"TEMP","eventDatetime":"2026-08-23T02:10:00","availableDatetime":"2026-08-23T02:15:00","role":"PRIMARY","contribution":0.58,"roleLabel":"Evidencia principal"},{"sourceFile":"device_observations.csv","recordId":"DOBS-220450","variableCode":"SIGNAL_QUALITY_INDEX","eventDatetime":"2026-08-23T03:00:00","availableDatetime":"2026-08-23T03:05:00","role":"QUALITY","contribution":0.2,"roleLabel":"Calidad del dato"}],"patientAge":64,"patientProgram":"Observación hospitalaria"},{"id":"SIG-2003","patientId":"PAT-0164","priority":"HIGH","riskScore":0.71,"confidence":0.74,"decisionDatetime":"2026-08-24T12:00:00","evidenceStart":"2026-08-24T00:00:00","evidenceEnd":"2026-08-24T12:00:00","isDemo":false,"headline":"La presión arterial sistólica se mantuvo elevada respecto al comportamiento habitual del paciente durante dos ventanas de análisis consecutivas.","whatHappened":"La presión arterial sistólica aumentó y permaneció elevada durante 12 horas, sin cambios recientes en la medicación antihipertensiva.","periodRecords":8,"changeStart":"2026-08-24T02:00:00","persistence":"Elevación sostenida durante las 12 horas de la ventana analizada.","pattern":"Aumento sostenido","patternExplain":"El valor se alejó de su rango personal habitual y se mantuvo elevado en dos mediciones consecutivas, sin volver al comportamiento previo.","increasedFactors":["La presión arterial sistólica se alejó de forma marcada de su comportamiento personal habitual.","La elevación persistió en dos ventanas consecutivas."],"decreasedFactors":["No hubo cambios recientes en la medicación antihipertensiva que expliquen el aumento.","La frecuencia cardiaca se mantuvo estable en el mismo periodo."],"dataQualityNote":"Cobertura de lecturas moderada (68%) — variable de muestreo menos frecuente (hasta cada 6h).","generalRule":"Una variable clínica relevante sostenida fuera de rango personal en 2+ ventanas, sin explicación de contexto (medicación, actividad), se prioriza como alta.","priorityReason":"Esta alerta recibió prioridad alta porque la presión arterial sistólica se mantuvo fuera de su rango personal durante dos ventanas consecutivas, sin que la medicación registrada explicara el cambio.","variables":[{"code":"SBP","name":"Presión arterial sistólica","unit":"mmHg","ref":"90–120 mmHg","lastValue":"148 mmHg","direction":"aumentó","contribution":0.68,"contributionLabel":"Influencia alta","explain":"Se mantuvo entre 142 y 148 mmHg durante 12 horas, por encima de su rango personal habitual (118–126 mmHg).","role":"PRIMARY"},{"code":"HR","name":"Frecuencia cardiaca","unit":"lpm","ref":"60–100 lpm","lastValue":"76 lpm","direction":"se mantuvo estable","contribution":0.1,"contributionLabel":"Influencia baja","explain":"Se mantuvo dentro de su rango habitual durante el mismo periodo.","role":"CONTEXT"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-330012","variableCode":"SBP","eventDatetime":"2026-08-24T02:05:00","availableDatetime":"2026-08-24T02:10:00","role":"PRIMARY","contribution":0.68,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-330098","variableCode":"SBP","eventDatetime":"2026-08-24T08:10:00","availableDatetime":"2026-08-24T08:16:00","role":"SUPPORTING","contribution":0.55,"roleLabel":"Evidencia de apoyo"},{"sourceFile":"medication_administrations.csv","recordId":"MEDADM-330500","variableCode":null,"eventDatetime":"2026-08-23T20:00:00","availableDatetime":"2026-08-23T20:05:00","role":"CONTEXT","contribution":0.1,"roleLabel":"Información de contexto"}],"patientAge":58,"patientProgram":"Seguimiento ambulatorio"},{"id":"SIG-2004","patientId":"PAT-0697","priority":"HIGH","riskScore":0.68,"confidence":0.7,"decisionDatetime":"2026-08-25T18:00:00","evidenceStart":"2026-08-25T00:00:00","evidenceEnd":"2026-08-25T18:00:00","isDemo":false,"headline":"La frecuencia respiratoria aumentó de forma gradual durante 18 horas mientras la saturación de oxígeno se mantuvo en el límite inferior habitual del paciente.","whatHappened":"La frecuencia respiratoria aumentó de forma gradual mientras la saturación de oxígeno se mantuvo en el límite inferior habitual.","periodRecords":19,"changeStart":"2026-08-25T06:00:00","persistence":"Tendencia positiva sostenida en las tres ventanas más recientes.","pattern":"Aumento sostenido","patternExplain":"Se observó una tendencia gradual y consistente al alza en una variable respiratoria a lo largo de tres ventanas consecutivas.","increasedFactors":["La frecuencia respiratoria mostró una tendencia positiva sostenida en 3 ventanas.","La saturación de oxígeno se mantuvo en el límite inferior de su comportamiento habitual durante el mismo periodo."],"decreasedFactors":["No se registraron incidentes de conectividad que pudieran explicar el cambio como ruido de señal."],"dataQualityNote":"Cobertura de lecturas alta (88%).","generalRule":"Una tendencia gradual y sostenida en una variable respiratoria, combinada con otra variable en el límite de su rango habitual, se prioriza como alta.","priorityReason":"Esta alerta recibió prioridad alta por la tendencia sostenida en la frecuencia respiratoria a lo largo de tres ventanas y su coincidencia con saturación de oxígeno en el límite inferior habitual del paciente.","variables":[{"code":"RR","name":"Frecuencia respiratoria","unit":"rpm","ref":"12–20 rpm","lastValue":"24 rpm","direction":"aumentó","contribution":0.63,"contributionLabel":"Influencia alta","explain":"Aumentó de forma gradual de 17 a 24 rpm a lo largo de tres ventanas de 6 horas.","role":"PRIMARY"},{"code":"SpO2","name":"Saturación de oxígeno","unit":"%","ref":"95–100 %","lastValue":"94 %","direction":"se mantuvo inestable","contribution":0.44,"contributionLabel":"Influencia moderada","explain":"Se mantuvo en 94 %, en el límite inferior del comportamiento reciente del paciente.","role":"PRIMARY"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-441200","variableCode":"RR","eventDatetime":"2026-08-25T07:00:00","availableDatetime":"2026-08-25T07:05:00","role":"PRIMARY","contribution":0.63,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-441450","variableCode":"RR","eventDatetime":"2026-08-25T13:10:00","availableDatetime":"2026-08-25T13:15:00","role":"SUPPORTING","contribution":0.5,"roleLabel":"Evidencia de apoyo"},{"sourceFile":"vital_signs.csv","recordId":"OBS-441460","variableCode":"SpO2","eventDatetime":"2026-08-25T13:12:00","availableDatetime":"2026-08-25T13:17:00","role":"PRIMARY","contribution":0.44,"roleLabel":"Evidencia principal"},{"sourceFile":"connectivity_events.csv","recordId":"CONN-441900","variableCode":null,"eventDatetime":"2026-08-25T00:00:00","availableDatetime":"2026-08-25T00:05:00","role":"QUALITY","contribution":0.05,"roleLabel":"Calidad del dato"}],"patientAge":45,"patientProgram":"Monitoreo domiciliario"},{"id":"SIG-2005","patientId":"PAT-0822","priority":"HIGH","riskScore":0.65,"confidence":0.77,"decisionDatetime":"2026-08-20T12:00:00","evidenceStart":"2026-08-20T06:00:00","evidenceEnd":"2026-08-20T12:00:00","isDemo":false,"headline":"Un resultado de laboratorio fuera de rango coincidió con un aumento de la frecuencia cardiaca en la misma ventana de análisis, confirmado por dos fuentes independientes.","whatHappened":"La glucosa en sangre se ubicó fuera de rango de referencia, coincidiendo con un aumento de la frecuencia cardiaca en las horas previas.","periodRecords":6,"changeStart":"2026-08-20T08:00:00","persistence":"Resultado puntual de laboratorio, reforzado por tendencia de signos vitales en la misma ventana.","pattern":"Diferencia respecto del comportamiento reciente","patternExplain":"Un resultado de laboratorio se alejó de su rango de referencia y coincidió, en la misma ventana, con un cambio en un signo vital — dos fuentes independientes apuntando en la misma dirección.","increasedFactors":["El resultado de glucosa se ubicó fuera del rango de referencia del laboratorio.","La frecuencia cardiaca aumentó en la misma ventana de análisis.","Las dos fuentes de evidencia son independientes entre sí (laboratorio y monitoreo continuo)."],"decreasedFactors":[],"dataQualityNote":"El resultado de laboratorio no venía marcado por ninguna bandera de calidad de origen.","generalRule":"Un resultado de laboratorio fuera de rango, reforzado por una fuente de monitoreo independiente en la misma ventana, se prioriza como alta.","priorityReason":"Esta alerta recibió prioridad alta porque un resultado de laboratorio fuera de rango coincidió, en la misma ventana de análisis, con un cambio en un signo vital proveniente de una fuente independiente.","variables":[{"code":"GLUCOSE","name":"Glucosa","unit":"mg/dL","ref":"70–140 mg/dL","lastValue":"182 mg/dL","direction":"aumentó","contribution":0.6,"contributionLabel":"Influencia alta","explain":"Resultado de laboratorio de 182 mg/dL, por encima del rango de referencia (70–140 mg/dL).","role":"PRIMARY"},{"code":"HR","name":"Frecuencia cardiaca","unit":"lpm","ref":"60–100 lpm","lastValue":"104 lpm","direction":"aumentó","contribution":0.47,"contributionLabel":"Influencia moderada","explain":"Aumentó de 78 a 104 lpm en las horas previas al resultado de laboratorio.","role":"PRIMARY"}],"evidence":[{"sourceFile":"laboratory_results.csv","recordId":"LAB-550210","variableCode":"GLUCOSE","eventDatetime":"2026-08-20T09:30:00","availableDatetime":"2026-08-20T10:15:00","role":"PRIMARY","contribution":0.6,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-550188","variableCode":"HR","eventDatetime":"2026-08-20T08:45:00","availableDatetime":"2026-08-20T08:50:00","role":"SUPPORTING","contribution":0.47,"roleLabel":"Evidencia de apoyo"}],"patientAge":76,"patientProgram":"Observación hospitalaria"},{"id":"SIG-2006","patientId":"PAT-0624","priority":"MEDIUM","riskScore":0.42,"confidence":0.55,"decisionDatetime":"2026-08-27T06:00:00","evidenceStart":"2026-08-27T00:00:00","evidenceEnd":"2026-08-27T06:00:00","isDemo":false,"headline":"La calidad de señal del wearable disminuyó justo cuando se registró una lectura inusual de frecuencia cardiaca, por lo que se prioriza como alerta de calidad y no como riesgo clínico directo.","whatHappened":"La calidad de señal del dispositivo disminuyó, coincidiendo con una lectura atípica de frecuencia cardiaca del wearable.","periodRecords":5,"changeStart":"2026-08-27T02:30:00","persistence":"Evento puntual, sin lecturas de respaldo de calidad suficiente en la misma ventana.","pattern":"Información contradictoria o incompleta","patternExplain":"La fuente que reportó el cambio mostró señales de baja calidad al mismo tiempo, por lo que el resultado requiere confirmación antes de tratarse como riesgo clínico.","increasedFactors":["Se registró una lectura de frecuencia cardiaca fuera de lo habitual."],"decreasedFactors":["La calidad de señal del dispositivo en ese momento fue baja (< 0.4), lo que reduce la confianza en la lectura.","No hay una lectura de un dispositivo clínico que confirme el valor."],"dataQualityNote":"Calidad de señal por debajo del umbral de confianza durante el evento — esta es, en sí misma, la razón principal de la alerta.","generalRule":"Un cambio detectado solo por una fuente con baja calidad de señal, sin confirmación de un dispositivo clínico, se prioriza como media y se marca explícitamente como señal de calidad.","priorityReason":"Esta alerta recibió prioridad media porque, aunque se registró una lectura atípica, la baja calidad de señal del dispositivo en ese momento reduce la confianza del resultado — se prioriza para confirmar el dato, no como una emergencia clínica directa.","variables":[{"code":"WEARABLE_HR","name":"Frecuencia cardiaca (wearable)","unit":"lpm","ref":"60–100 lpm","lastValue":"142 lpm","direction":"aumentó","contribution":0.55,"contributionLabel":"Influencia alta","explain":"Registró un valor de 142 lpm, muy por encima del comportamiento habitual del wearable en este paciente.","role":"PRIMARY"},{"code":"SIGNAL_QUALITY_INDEX","name":"Calidad de señal del dispositivo","unit":"índice 0–1","ref":"≥ 0.70","lastValue":"0.31","direction":"disminuyó","contribution":0.5,"contributionLabel":"Factor que redujo el riesgo","explain":"Cayó por debajo de 0.40 en el mismo momento, lo que reduce la confianza en la lectura de frecuencia cardiaca.","role":"QUALITY"}],"evidence":[{"sourceFile":"wearable_observations.csv","recordId":"WOBS-670120","variableCode":"WEARABLE_HR","eventDatetime":"2026-08-27T02:35:00","availableDatetime":"2026-08-27T02:50:00","role":"PRIMARY","contribution":0.55,"roleLabel":"Evidencia principal"},{"sourceFile":"device_observations.csv","recordId":"DOBS-670121","variableCode":"SIGNAL_QUALITY_INDEX","eventDatetime":"2026-08-27T02:35:00","availableDatetime":"2026-08-27T02:50:00","role":"QUALITY","contribution":0.5,"roleLabel":"Calidad del dato"}],"patientAge":39,"patientProgram":"Monitoreo domiciliario"},{"id":"SIG-2007","patientId":"PAT-0903","priority":"MEDIUM","riskScore":0.48,"confidence":0.68,"decisionDatetime":"2026-08-21T18:00:00","evidenceStart":"2026-08-21T12:00:00","evidenceEnd":"2026-08-21T18:00:00","isDemo":false,"headline":"La presión arterial mostró una variación notoria poco después de administrarse una medicación registrada, lo que ofrece contexto parcial sobre el cambio observado.","whatHappened":"La presión arterial diastólica disminuyó luego del registro de una administración de medicación, dentro de la misma ventana de análisis.","periodRecords":7,"changeStart":"2026-08-21T14:10:00","persistence":"Cambio puntual, sin persistencia en registros posteriores dentro de la ventana.","pattern":"Variación brusca","patternExplain":"Se observó un cambio notorio en una sola variable, en un momento cercano a un evento de contexto registrado (administración de medicación), lo que ofrece una posible explicación parcial.","increasedFactors":["La presión arterial diastólica cambió de forma notoria dentro de la ventana analizada."],"decreasedFactors":["El cambio ocurrió poco después de una administración de medicación registrada, lo que ofrece una explicación de contexto parcial.","No se repitió en los registros posteriores de la misma ventana."],"dataQualityNote":"Cobertura de lecturas moderada (64%).","generalRule":"Un cambio puntual con una explicación de contexto disponible (medicación reciente) y sin persistencia posterior se prioriza como media.","priorityReason":"Esta alerta recibió prioridad media porque, si bien la presión arterial diastólica cambió de forma notoria, existe una explicación de contexto parcial (medicación administrada poco antes) y el cambio no persistió en registros posteriores.","variables":[{"code":"DBP","name":"Presión arterial diastólica","unit":"mmHg","ref":"60–80 mmHg","lastValue":"58 mmHg","direction":"disminuyó","contribution":0.52,"contributionLabel":"Influencia moderada","explain":"Disminuyó de 74 a 58 mmHg poco después del registro de una medicación administrada.","role":"PRIMARY"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-710340","variableCode":"DBP","eventDatetime":"2026-08-21T14:15:00","availableDatetime":"2026-08-21T14:20:00","role":"PRIMARY","contribution":0.52,"roleLabel":"Evidencia principal"},{"sourceFile":"medication_administrations.csv","recordId":"MEDADM-710300","variableCode":null,"eventDatetime":"2026-08-21T13:50:00","availableDatetime":"2026-08-21T13:58:00","role":"CONTEXT","contribution":0.35,"roleLabel":"Información de contexto"}],"patientAge":82,"patientProgram":"Seguimiento ambulatorio"},{"id":"SIG-2008","patientId":"PAT-0075","priority":"MEDIUM","riskScore":0.51,"confidence":0.63,"decisionDatetime":"2026-08-26T00:00:00","evidenceStart":"2026-08-25T18:00:00","evidenceEnd":"2026-08-26T00:00:00","isDemo":false,"headline":"La temperatura corporal y la frecuencia respiratoria aumentaron de forma conjunta durante la ventana analizada, sin actividad física registrada que lo explique.","whatHappened":"La temperatura corporal y la frecuencia respiratoria aumentaron de forma conjunta durante las últimas 6 horas.","periodRecords":11,"changeStart":"2026-08-25T20:00:00","persistence":"Comportamiento sostenido durante la segunda mitad de la ventana analizada.","pattern":"Cambios simultáneos en varias variables","patternExplain":"Dos variables asociadas a un posible proceso inflamatorio cambiaron en la misma dirección durante el mismo periodo, sin actividad física que lo explique.","increasedFactors":["Dos variables cambiaron en la misma dirección de riesgo dentro de la misma ventana.","El nivel de actividad física registrado fue bajo, por lo que no explica el aumento de frecuencia respiratoria."],"decreasedFactors":["La saturación de oxígeno se mantuvo dentro de su rango habitual durante el mismo periodo."],"dataQualityNote":"Cobertura de lecturas alta (85%).","generalRule":"Dos variables asociadas a un mismo posible proceso, cambiando de forma simultánea sin explicación de actividad física, se priorizan como media, a la espera de confirmación de una tercera variable.","priorityReason":"Esta alerta recibió prioridad media porque dos variables cambiaron de forma simultánea en una dirección de riesgo, sin que la actividad física registrada explique el cambio, aunque la saturación de oxígeno se mantuvo estable.","variables":[{"code":"TEMP","name":"Temperatura corporal","unit":"°C","ref":"36.1–37.2 °C","lastValue":"37.9 °C","direction":"aumentó","contribution":0.49,"contributionLabel":"Influencia moderada","explain":"Aumentó de 36.8 °C a 37.9 °C durante la ventana analizada.","role":"PRIMARY"},{"code":"RR","name":"Frecuencia respiratoria","unit":"rpm","ref":"12–20 rpm","lastValue":"21 rpm","direction":"aumentó","contribution":0.41,"contributionLabel":"Influencia moderada","explain":"Aumentó de 15 a 21 rpm en el mismo periodo.","role":"PRIMARY"},{"code":"ACTIVITY_LEVEL","name":"Nivel de actividad","unit":"nivel","ref":"según rutina habitual","lastValue":"Bajo","direction":"se mantuvo estable","contribution":0.08,"contributionLabel":"Influencia baja","explain":"Se mantuvo bajo durante toda la ventana, sin explicar el cambio respiratorio.","role":"CONTEXT"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-880210","variableCode":"TEMP","eventDatetime":"2026-08-25T21:40:00","availableDatetime":"2026-08-25T21:45:00","role":"PRIMARY","contribution":0.49,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-880215","variableCode":"RR","eventDatetime":"2026-08-25T21:42:00","availableDatetime":"2026-08-25T21:47:00","role":"PRIMARY","contribution":0.41,"roleLabel":"Evidencia principal"},{"sourceFile":"wearable_observations.csv","recordId":"WOBS-880300","variableCode":"ACTIVITY_LEVEL","eventDatetime":"2026-08-25T19:00:00","availableDatetime":"2026-08-25T19:05:00","role":"CONTEXT","contribution":0.08,"roleLabel":"Información de contexto"}],"patientAge":55,"patientProgram":"Monitoreo domiciliario"},{"id":"SIG-2009","patientId":"PAT-0147","priority":"LOW","riskScore":0.28,"confidence":0.6,"decisionDatetime":"2026-08-23T18:00:00","evidenceStart":"2026-08-23T12:00:00","evidenceEnd":"2026-08-23T18:00:00","isDemo":false,"headline":"Un resultado de laboratorio se ubicó levemente fuera de rango, con una variación leve de temperatura en las horas previas.","whatHappened":"El potasio en sangre se ubicó levemente por encima del rango de referencia, con una variación leve de temperatura en las horas previas.","periodRecords":4,"changeStart":"2026-08-23T15:00:00","persistence":"Resultado puntual, sin lecturas posteriores que confirmen tendencia.","pattern":"Diferencia respecto del comportamiento reciente","patternExplain":"Un valor de laboratorio se ubicó levemente fuera de su rango de referencia, con una variación leve y no concluyente en otra variable dentro de la misma ventana.","increasedFactors":["El resultado de laboratorio se ubicó levemente por encima del rango de referencia."],"decreasedFactors":["La desviación fue leve, no marcada.","La variación de temperatura asociada fue mínima y dentro de un rango considerado normal para el paciente."],"dataQualityNote":"Cobertura de lecturas baja (35%) — pocas lecturas disponibles en esta ventana.","generalRule":"Una desviación leve en un único resultado de laboratorio, sin refuerzo claro de otra variable ni persistencia, se prioriza como baja.","priorityReason":"Esta alerta recibió prioridad baja porque la desviación del resultado de laboratorio fue leve, la variable asociada mostró un cambio mínimo, y no hubo lecturas adicionales que confirmaran una tendencia.","variables":[{"code":"POTASSIUM","name":"Potasio en sangre","unit":"mEq/L","ref":"3.5–5.0 mEq/L","lastValue":"5.3 mEq/L","direction":"aumentó","contribution":0.3,"contributionLabel":"Influencia moderada","explain":"Se ubicó levemente por encima del rango de referencia (3.5–5.0 mEq/L).","role":"PRIMARY"},{"code":"TEMP","name":"Temperatura corporal","unit":"°C","ref":"36.1–37.2 °C","lastValue":"37.3 °C","direction":"aumentó","contribution":0.12,"contributionLabel":"Influencia baja","explain":"Presentó una variación leve, dentro de un margen considerado normal para el paciente.","role":"CONTEXT"}],"evidence":[{"sourceFile":"laboratory_results.csv","recordId":"LAB-990410","variableCode":"POTASSIUM","eventDatetime":"2026-08-23T15:10:00","availableDatetime":"2026-08-23T16:00:00","role":"PRIMARY","contribution":0.3,"roleLabel":"Evidencia principal"},{"sourceFile":"vital_signs.csv","recordId":"OBS-990420","variableCode":"TEMP","eventDatetime":"2026-08-23T14:30:00","availableDatetime":"2026-08-23T14:35:00","role":"CONTEXT","contribution":0.12,"roleLabel":"Información de contexto"}],"patientAge":67,"patientProgram":"Seguimiento ambulatorio"},{"id":"SIG-2010","patientId":"PAT-0993","priority":"LOW","riskScore":0.22,"confidence":0.4,"decisionDatetime":"2026-08-24T06:00:00","evidenceStart":"2026-08-24T00:00:00","evidenceEnd":"2026-08-24T06:00:00","isDemo":false,"headline":"Se registró un valor de frecuencia cardiaca fuera de lo habitual, pero con pocas lecturas disponibles en la ventana analizada, lo que reduce la confianza del resultado.","whatHappened":"Se registró un valor aislado de frecuencia cardiaca elevado, con baja cobertura de lecturas en la ventana.","periodRecords":2,"changeStart":"2026-08-24T04:00:00","persistence":"Lectura única, sin registros adicionales que confirmen persistencia.","pattern":"Información contradictoria o incompleta","patternExplain":"Se identificó un valor fuera de lo habitual, pero la baja cantidad de lecturas disponibles en la ventana no permite confirmar si se trata de un cambio real o de un dato aislado.","increasedFactors":["Se registró un valor de frecuencia cardiaca por encima del comportamiento habitual del paciente."],"decreasedFactors":["Solo se dispuso de 2 lecturas en toda la ventana (cobertura 17%), muy por debajo de lo esperado.","No hay una segunda lectura que confirme el valor."],"dataQualityNote":"Cobertura de lecturas muy baja — la confianza de esta alerta se ve directamente afectada por la escasez de datos.","generalRule":"Un valor aislado, sin lecturas adicionales de respaldo y con cobertura muy baja, se prioriza como baja y con nivel de confianza reducido, quedando disponible para revisión humana.","priorityReason":"Esta alerta recibió prioridad baja y confianza reducida porque, si bien se registró un valor elevado de frecuencia cardiaca, la baja cobertura de lecturas en la ventana no permite confirmar si el comportamiento es sostenido.","variables":[{"code":"HR","name":"Frecuencia cardiaca","unit":"lpm","ref":"60–100 lpm","lastValue":"132 lpm","direction":"aumentó","contribution":0.35,"contributionLabel":"Influencia moderada","explain":"Único valor disponible en la ventana, muy por encima de la última lectura confiable registrada.","role":"PRIMARY"}],"evidence":[{"sourceFile":"vital_signs.csv","recordId":"OBS-105500","variableCode":"HR","eventDatetime":"2026-08-24T04:05:00","availableDatetime":"2026-08-24T04:10:00","role":"PRIMARY","contribution":0.35,"roleLabel":"Evidencia principal"},{"sourceFile":"connectivity_events.csv","recordId":"CONN-105510","variableCode":null,"eventDatetime":"2026-08-24T01:00:00","availableDatetime":"2026-08-24T01:05:00","role":"QUALITY","contribution":0.2,"roleLabel":"Calidad del dato"}],"patientAge":49,"patientProgram":"Monitoreo domiciliario"}];
+
+/* Arranca la carga de datos en paralelo con la pantalla de login, para que
+   esté lista (o el fallback offline activado) cuando el usuario entre. */
+const signalsReadyPromise = loadSignalsData();
+
+/* ---------- Utilidades ---------- */
+const Utils = (function(){
+  function fmtDate(iso){
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  function fmtDateTime(iso){
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mi = String(d.getMinutes()).padStart(2,"0");
+    return `${dd}/${mm}/${yyyy}, ${hh}:${mi}`;
+  }
+  function timeOnly(iso){
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  }
+  function debounce(fn, wait){
+    let t; return function(...args){ clearTimeout(t); t = setTimeout(()=>fn.apply(this,args), wait); };
+  }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+  }
+  function priorityLabel(p){
+    return {LOW:"Baja",MEDIUM:"Media",HIGH:"Alta",CRITICAL:"Crítica"}[p] || p;
+  }
+  function safeLocalStorage(){
+    try{ const k="__hs_test__"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }
+    catch(e){ return false; }
+  }
+  const hasLS = safeLocalStorage();
+  function lsGet(key, fallback){
+    if(!hasLS) return fallback;
+    try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function lsSet(key, value){
+    if(!hasLS) return false;
+    try{ localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch(e){ return false; }
+  }
+  return { fmtDate, fmtDateTime, timeOnly, debounce, escapeHtml, priorityLabel, hasLS, lsGet, lsSet };
+})();
+
+/* ---------- Iconos SVG inline (una sola familia, trazo consistente) ---------- */
+const Icon = {
+  trendUp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  trendDown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`,
+  minus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  alert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  layers: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  arrowLeft: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
+  chevronDown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>`,
+  activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  puzzle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 2c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29"/></svg>`,
+  database: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`,
+  eye: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  target: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>`,
+  emptyBox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
+};
+
+function fmtPatientMeta(age, program){
+  const agePart = (age!=null) ? `${age} años` : "Edad no disponible";
+  const programPart = program || "Programa no asignado";
+  return `${agePart} · ${programPart}`;
+}
+function directionIcon(dir){
+  if(/aument/.test(dir)) return {svg:Icon.trendUp, color:"var(--color-high)"};
+  if(/disminuy/.test(dir)) return {svg:Icon.trendDown, color:"var(--color-info)"};
+  return {svg:Icon.minus, color:"var(--color-text-secondary)"};
+}
+function priorityBadge(p){
+  const cls = {LOW:"badge-low",MEDIUM:"badge-medium",HIGH:"badge-high",CRITICAL:"badge-critical"}[p];
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${Utils.priorityLabel(p)}</span>`;
+}
+const ROLE_LABEL = {PRIMARY:"Evidencia principal", SUPPORTING:"Evidencia de apoyo", CONTEXT:"Información de contexto", QUALITY:"Calidad del dato"};
+
+/* ---------- Estado central de la app ---------- */
+const AppState = {
+  currentRoute: {name:"dashboard", params:{}},
+  alertsFilter: {priority:"ALL", search:"", sort:"priority"},
+  alertsPage: 1,
+  pageSize: 5,
+  detailView: {}, // signalId -> 'simple' | 'technical'
+  reviewState: Utils.lsGet("hs_reviewState", {}),   // signalId -> {status, updatedAt}
+  auditLog: Utils.lsGet("hs_auditLog", {}),         // signalId -> [entries]
+  demoMode: false,
+  demoSteps: [
+    {id:"view", label:"Ver alertas priorizadas", done:false},
+    {id:"select", label:"Seleccionar una alerta crítica o alta", done:false},
+    {id:"what", label:"Comprender qué ocurrió", done:false},
+    {id:"vars", label:"Revisar las variables que cambiaron", done:false},
+    {id:"evol", label:"Observar su evolución", done:false},
+    {id:"pattern", label:"Comprender el patrón", done:false},
+    {id:"why", label:"Entender por qué se asignó la prioridad", done:false},
+    {id:"trace", label:"Abrir las evidencias y fuentes exactas", done:false},
+    {id:"review", label:"Registrar la revisión del profesional", done:false},
+  ],
+};
+
+function markDemoStep(id){
+  if(!AppState.demoMode) return;
+  const s = AppState.demoSteps.find(s=>s.id===id);
+  if(s && !s.done){ s.done = true; renderDemoPanel(); }
+}
+
+function getSignal(id){ return SIGNAL_DETAILS_CACHE[id] || SIGNALS_DATA.find(s => s.id === id); }
+function getReview(id){ return AppState.reviewState[id] || {status:"pending", updatedAt:null}; }
+function reviewLabel(status){
+  return {pending:"Pendiente de revisión", in_review:"En revisión", reviewed:"Revisada", followup:"En seguimiento", escalated:"Escalada"}[status] || status;
+}
+
+function addAuditEntry(signalId, entry){
+  if(!AppState.auditLog[signalId]) AppState.auditLog[signalId] = [];
+  AppState.auditLog[signalId].unshift(entry);
+  Utils.lsSet("hs_auditLog", AppState.auditLog);
+}
+
+function setReviewStatus(signalId, newStatus, note){
+  const prev = getReview(signalId);
+  const now = new Date().toISOString();
+  AppState.reviewState[signalId] = {status:newStatus, updatedAt:now};
+  Utils.lsSet("hs_reviewState", AppState.reviewState);
+  addAuditEntry(signalId, {
+    user:"Dra. Rojas", role:"Personal de salud", action:"Cambio de estado de revisión",
+    at: now, from: prev.status, to: newStatus, note: note || "",
+  });
+}
+
+/* ---------- Toasts ---------- */
+function toast(message, type){
+  const region = document.getElementById("toastRegion");
+  const el = document.createElement("div");
+  el.className = "toast" + (type === "info" ? " toast-info" : "");
+  el.innerHTML = (type==="info"?Icon.info:Icon.check) + `<span>${Utils.escapeHtml(message)}</span>`;
+  region.appendChild(el);
+  setTimeout(()=>{ el.style.opacity="0"; el.style.transition="opacity .2s"; setTimeout(()=>el.remove(),220); }, 3200);
+}
+
+/* ---------- Modal de confirmación ---------- */
+function confirmModal(title, body, onConfirm){
+  const backdrop = document.getElementById("modalBackdrop");
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalBody").textContent = body;
+  backdrop.classList.add("is-open");
+  const confirmBtn = document.getElementById("modalConfirmBtn");
+  const cancelBtn = document.getElementById("modalCancelBtn");
+  function close(){ backdrop.classList.remove("is-open"); confirmBtn.removeEventListener("click", onOk); cancelBtn.removeEventListener("click", close); }
+  function onOk(){ onConfirm(); close(); }
+  confirmBtn.addEventListener("click", onOk);
+  cancelBtn.addEventListener("click", close);
+}
+document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
+  if(e.target.id === "modalBackdrop") document.getElementById("modalBackdrop").classList.remove("is-open");
+});
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape") document.getElementById("modalBackdrop").classList.remove("is-open");
+});
+
+/* ---------- Router ---------- */
+const Router = (function(){
+  function parseHash(){
+    const raw = location.hash.replace(/^#\/?/, "");
+    const [name, param] = raw.split("/");
+    return { name: name || "dashboard", params: { id: param } };
+  }
+  function navigate(name, id){
+    location.hash = id ? `#/${name}/${id}` : `#/${name}`;
+  }
+  function onHashChange(){
+    AppState.currentRoute = parseHash();
+    render();
+    window.scrollTo(0,0);
+    closeMobileSidebar();
+  }
+  window.addEventListener("hashchange", onHashChange);
+  return { navigate, init: onHashChange, current: () => AppState.currentRoute };
+})();
+
+document.querySelectorAll("[data-nav]").forEach(btn=>{
+  btn.addEventListener("click", ()=> Router.navigate(btn.getAttribute("data-nav")));
+});
+
+/* ---------- Sidebar móvil ---------- */
+function openMobileSidebar(){ document.getElementById("sidebar").classList.add("is-open"); document.getElementById("mobileOverlay").classList.add("is-open"); }
+function closeMobileSidebar(){ document.getElementById("sidebar").classList.remove("is-open"); document.getElementById("mobileOverlay").classList.remove("is-open"); }
+document.getElementById("menuToggleBtn").addEventListener("click", openMobileSidebar);
+document.getElementById("mobileOverlay").addEventListener("click", closeMobileSidebar);
+
+/* ---------- Login ---------- */
+document.getElementById("loginForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const email = document.getElementById("loginEmail");
+  const pass = document.getElementById("loginPassword");
+  let valid = true;
+  const emailField = document.getElementById("fieldEmail");
+  const passField = document.getElementById("fieldPassword");
+  emailField.classList.remove("has-error"); passField.classList.remove("has-error");
+  if(!email.value || !/^\S+@\S+\.\S+$/.test(email.value)){ emailField.classList.add("has-error"); valid = false; }
+  if(!pass.value){ passField.classList.add("has-error"); valid = false; }
+  if(!valid) return;
+  const btn = document.getElementById("loginSubmitBtn");
+  btn.classList.add("is-loading"); btn.disabled = true;
+  setTimeout(async ()=>{
+    await signalsReadyPromise;
+    btn.classList.remove("is-loading"); btn.disabled = false;
+    document.getElementById("authScreen").classList.add("is-hidden");
+    document.getElementById("appShell").classList.add("is-active");
+    Router.init();
+    if(dataSource === "live") toast("Sesión iniciada correctamente.");
+    else toast("Sesión iniciada — sin conexión al backend, mostrando datos de demostración locales.", "info");
+  }, 550);
+});
+function logout(){
+  document.getElementById("authScreen").classList.remove("is-hidden");
+  document.getElementById("appShell").classList.remove("is-active");
+  location.hash = "";
+}
+document.getElementById("logoutBtn").addEventListener("click", logout);
+document.getElementById("profileLogoutBtn").addEventListener("click", logout);
+
+/* ---------- Modo demo ---------- */
+const demoToggle = document.getElementById("demoModeToggle");
+demoToggle.addEventListener("change", function(){
+  AppState.demoMode = this.checked;
+  document.getElementById("demoPanel").classList.toggle("is-open", this.checked);
+  if(this.checked) renderDemoPanel();
+});
+document.getElementById("demoCloseBtn").addEventListener("click", ()=>{
+  demoToggle.checked = false; AppState.demoMode = false;
+  document.getElementById("demoPanel").classList.remove("is-open");
+});
+function renderDemoPanel(){
+  const list = document.getElementById("demoList");
+  list.innerHTML = AppState.demoSteps.map(s => `
+    <div class="demo-step ${s.done ? "done":""}">
+      <span class="demo-step-check">${s.done ? Icon.check : ""}</span>
+      <span>${s.label}</span>
+    </div>`).join("");
+}
+
+/* ---------- Reset datos locales ---------- */
+document.getElementById("resetLocalDataBtn").addEventListener("click", ()=>{
+  confirmModal("Restablecer datos locales", "Se borrará el historial de atención y el estado de revisión guardados en este navegador. Esta acción no afecta ningún dato real.", ()=>{
+    AppState.reviewState = {}; AppState.auditLog = {};
+    Utils.lsSet("hs_reviewState", {}); Utils.lsSet("hs_auditLog", {});
+    toast("Datos locales del prototipo restablecidos.");
+    render();
+  });
+});
+
+/* ---------- Config toggles (persistencia simulada) ---------- */
+document.querySelectorAll("[data-setting]").forEach(el=>{
+  const key = "hs_setting_" + el.getAttribute("data-setting");
+  const saved = Utils.lsGet(key, null);
+  if(saved !== null){
+    if(el.type === "checkbox") el.checked = saved; else el.value = saved;
+  }
+  el.addEventListener("change", ()=>{
+    Utils.lsSet(key, el.type === "checkbox" ? el.checked : el.value);
+    toast("Preferencia guardada.");
+  });
+});
+
+/* ============================================================
+   RENDER — Dashboard
+   ============================================================ */
+function renderDashboard(){
+  const view = document.getElementById("view-dashboard");
+  const total = SIGNALS_DATA.length;
+  const critical = SIGNALS_DATA.filter(s=>s.priority==="CRITICAL").length;
+  const high = SIGNALS_DATA.filter(s=>s.priority==="HIGH").length;
+  const patients = new Set(SIGNALS_DATA.map(s=>s.patientId)).size;
+
+  const stats = [
+    {label:"Alertas activas", value:total, icon:Icon.alert, color:"var(--color-primary)", bg:"var(--color-primary-light)"},
+    {label:"Prioridad crítica", value:critical, icon:Icon.alert, color:"var(--color-critical)", bg:"var(--color-critical-bg)"},
+    {label:"Prioridad alta", value:high, icon:Icon.trendUp, color:"var(--color-high)", bg:"var(--color-high-bg)"},
+    {label:"Pacientes monitoreados", value:patients, icon:Icon.users, color:"var(--color-info)", bg:"var(--color-info-bg)"},
+  ];
+  document.getElementById("statCards").innerHTML = stats.map(s => `
+    <div class="card stat-card">
+      <div class="stat-card-top">
+        <div class="stat-icon" style="background:${s.bg}; color:${s.color};">${s.icon}</div>
+      </div>
+      <div class="stat-value">${s.value}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>`).join("");
+
+  document.getElementById("chartPriority").innerHTML = svgBarChart();
+  document.getElementById("chartPerDay").innerHTML = svgLineChartPerDay();
+
+  const recent = [...SIGNALS_DATA].sort((a,b)=> new Date(b.decisionDatetime)-new Date(a.decisionDatetime)).slice(0,5);
+  document.getElementById("recentAlertsList").innerHTML = recent.map(s => alertListRow(s)).join("");
+  attachRowHandlers(document.getElementById("recentAlertsList"));
+}
+
+function svgBarChart(){
+  const order = ["CRITICAL","HIGH","MEDIUM","LOW"];
+  const colors = {CRITICAL:"var(--color-critical)",HIGH:"var(--color-high)",MEDIUM:"var(--color-medium)",LOW:"var(--color-low)"};
+  const counts = order.map(p => SIGNALS_DATA.filter(s=>s.priority===p).length);
+  const max = Math.max(...counts, 1);
+  const w = 320, h = 140, barW = 46, gap = 30, baseY = 110;
+  let bars = "", labels = "";
+  order.forEach((p,i)=>{
+    const x = 20 + i*(barW+gap);
+    const bh = (counts[i]/max) * 80;
+    bars += `<rect x="${x}" y="${baseY-bh}" width="${barW}" height="${bh}" rx="4" fill="${colors[p]}"><title>${Utils.priorityLabel(p)}: ${counts[i]}</title></rect>`;
+    bars += `<text x="${x+barW/2}" y="${baseY-bh-6}" text-anchor="middle" font-size="12" font-weight="700" fill="#0F172A">${counts[i]}</text>`;
+    labels += `<text x="${x+barW/2}" y="${baseY+18}" text-anchor="middle" font-size="10.5" fill="#64748B">${Utils.priorityLabel(p)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="140" role="img" aria-label="Gráfico de barras: cantidad de alertas por nivel de prioridad">
+    <line x1="20" y1="${baseY}" x2="${w-20}" y2="${baseY}" stroke="#E2E8F0" stroke-width="1"/>
+    ${bars}${labels}</svg>`;
+}
+
+function svgLineChartPerDay(){
+  const days = {};
+  SIGNALS_DATA.forEach(s=>{
+    const d = Utils.fmtDate(s.decisionDatetime);
+    days[d] = (days[d]||0)+1;
+  });
+  const entries = Object.entries(days).sort((a,b)=>{
+    const [d1,m1,y1]=a[0].split("/"); const [d2,m2,y2]=b[0].split("/");
+    return new Date(`${y1}-${m1}-${d1}`) - new Date(`${y2}-${m2}-${d2}`);
+  });
+  if(entries.length === 0) return emptyChartState();
+  const w = 320, h = 140, padL=24, padR=16, padB=28, padT=16;
+  const max = Math.max(...entries.map(e=>e[1]), 1);
+  const stepX = (w-padL-padR) / Math.max(entries.length-1,1);
+  const pts = entries.map((e,i)=>{
+    const x = padL + i*stepX;
+    const y = padT + (1-(e[1]/max)) * (h-padT-padB);
+    return {x,y,label:e[0].slice(0,5),val:e[1]};
+  });
+  const path = pts.map((p,i)=> (i===0?"M":"L")+p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ");
+  const dots = pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#0F766E"><title>${p.label}: ${p.val}</title></circle>`).join("");
+  const labels = pts.map((p,i)=> i%2===0 ? `<text x="${p.x}" y="${h-8}" text-anchor="middle" font-size="9.5" fill="#64748B">${p.label}</text>`:"").join("");
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="140" role="img" aria-label="Gráfico de línea: alertas detectadas por día">
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#E2E8F0" stroke-width="1"/>
+    <path d="${path}" fill="none" stroke="#0F766E" stroke-width="2"/>
+    ${dots}${labels}</svg>`;
+}
+function emptyChartState(){
+  return `<div class="empty-state" style="padding:24px;">${Icon.emptyBox}<p class="text-aux">Sin datos suficientes para este periodo.</p></div>`;
+}
+
+function alertListRow(s){
+  const review = getReview(s.id);
+  return `<div class="factor-row priority-border-${s.priority.toLowerCase()}" style="padding:14px 20px; cursor:pointer; display:grid; grid-template-columns:auto 1fr auto auto; align-items:center;" data-open-alert="${s.id}" tabindex="0" role="button">
+    <div style="margin-right:14px;">${priorityBadge(s.priority)}</div>
+    <div>
+      <div style="font-weight:600; font-size:13.5px;">${s.patientId} ${s.isDemo ? '<span class="badge badge-info" style="margin-left:6px;">Alerta de demostración</span>' : ""}</div>
+      <div class="truncate text-secondary" style="font-size:12.5px; max-width:420px;">${Utils.escapeHtml(s.headline)}</div>
+    </div>
+    <div class="text-aux" style="white-space:nowrap; margin:0 16px;">${Utils.fmtDateTime(s.decisionDatetime)}</div>
+    <div><span class="badge badge-neutral">${Utils.escapeHtml(reviewLabel(review.status))}</span></div>
+  </div>`;
+}
+function attachRowHandlers(container){
+  container.querySelectorAll("[data-open-alert]").forEach(el=>{
+    el.addEventListener("click", ()=> { markDemoStep("select"); Router.navigate("alertDetail", el.getAttribute("data-open-alert")); });
+    el.addEventListener("keydown", (e)=>{ if(e.key==="Enter") el.click(); });
+  });
+}
+
+/* ============================================================
+   RENDER — Lista de alertas
+   ============================================================ */
+function filteredSignals(){
+  let list = [...SIGNALS_DATA];
+  const { priority, search, sort } = AppState.alertsFilter;
+  if(priority !== "ALL") list = list.filter(s=>s.priority===priority);
+  if(search) list = list.filter(s => s.patientId.toLowerCase().includes(search.toLowerCase()) || s.headline.toLowerCase().includes(search.toLowerCase()));
+  const order = {CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
+  if(sort === "priority") list.sort((a,b)=> order[a.priority]-order[b.priority] || b.riskScore-a.riskScore);
+  if(sort === "recent") list.sort((a,b)=> new Date(b.decisionDatetime)-new Date(a.decisionDatetime));
+  if(sort === "risk") list.sort((a,b)=> b.riskScore-a.riskScore);
+  return list;
+}
+
+function renderAlertsList(showSkeleton){
+  const tbody = document.getElementById("alertsTableBody");
+  const mobile = document.getElementById("alertsCardsMobile");
+  if(showSkeleton){
+    const rows = Array.from({length:4}).map(()=>`<tr><td colspan="5"><div class="skeleton" style="height:14px;width:90%;"></div></td></tr>`).join("");
+    tbody.innerHTML = rows;
+    setTimeout(()=>renderAlertsList(false), 380);
+    return;
+  }
+  const all = filteredSignals();
+  const totalPages = Math.max(1, Math.ceil(all.length / AppState.pageSize));
+  AppState.alertsPage = Math.min(AppState.alertsPage, totalPages);
+  const start = (AppState.alertsPage-1)*AppState.pageSize;
+  const pageItems = all.slice(start, start+AppState.pageSize);
+
+  if(all.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">${Icon.emptyBox}<p style="font-weight:600;">No se encontraron alertas</p><p class="text-aux">Ajusta los filtros o el término de búsqueda.</p></div></td></tr>`;
+    mobile.innerHTML = "";
+    document.getElementById("alertsPagination").innerHTML = "";
+    return;
+  }
+
+  tbody.innerHTML = pageItems.map(s => {
+    const review = getReview(s.id);
+    return `<tr class="priority-border-${s.priority.toLowerCase()}" data-open-alert="${s.id}" tabindex="0">
+      <td>${priorityBadge(s.priority)}</td>
+      <td class="td-primary">${s.patientId}${s.isDemo ? ' <span class="badge badge-info">Demo</span>':""}</td>
+      <td class="truncate">${Utils.escapeHtml(s.headline)}</td>
+      <td class="text-aux" style="white-space:nowrap;">${Utils.fmtDateTime(s.decisionDatetime)}</td>
+      <td><span class="badge badge-neutral">${reviewLabel(review.status)}</span></td>
+    </tr>`;
+  }).join("");
+  attachRowHandlers(tbody);
+
+  mobile.innerHTML = pageItems.map(s=>{
+    const review = getReview(s.id);
+    return `<div class="card priority-border-${s.priority.toLowerCase()}" style="padding:16px;" data-open-alert="${s.id}">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">${priorityBadge(s.priority)}<span class="text-aux">${Utils.fmtDateTime(s.decisionDatetime)}</span></div>
+      <div style="font-weight:600; margin-bottom:4px;">${s.patientId}</div>
+      <div class="text-secondary" style="font-size:12.5px; margin-bottom:8px;">${Utils.escapeHtml(s.headline)}</div>
+      <span class="badge badge-neutral">${reviewLabel(review.status)}</span>
+    </div>`;
+  }).join("");
+  attachRowHandlers(mobile);
+
+  const pag = document.getElementById("alertsPagination");
+  let pageBtns = "";
+  for(let i=1;i<=totalPages;i++) pageBtns += `<button class="page-btn ${i===AppState.alertsPage?"is-active":""}" data-page="${i}">${i}</button>`;
+  pag.innerHTML = `<span class="text-aux">${all.length} alerta(s) · página ${AppState.alertsPage} de ${totalPages}</span><div class="pagination-pages">${pageBtns}</div>`;
+  pag.querySelectorAll("[data-page]").forEach(b=> b.addEventListener("click", ()=>{ AppState.alertsPage = parseInt(b.getAttribute("data-page")); renderAlertsList(false); window.scrollTo({top:0,behavior:"auto"}); }));
+  markDemoStep("view");
+}
+
+document.querySelectorAll("#priorityFilters .chip").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    document.querySelectorAll("#priorityFilters .chip").forEach(c=>c.classList.remove("is-active"));
+    chip.classList.add("is-active");
+    AppState.alertsFilter.priority = chip.getAttribute("data-p");
+    AppState.alertsPage = 1;
+    renderAlertsList(true);
+  });
+});
+document.getElementById("alertSearch").addEventListener("input", Utils.debounce(function(){
+  AppState.alertsFilter.search = this.value; AppState.alertsPage = 1; renderAlertsList(true);
+}, 300));
+document.getElementById("alertSort").addEventListener("change", function(){
+  AppState.alertsFilter.sort = this.value; renderAlertsList(true);
+});
+document.getElementById("globalSearch").addEventListener("input", Utils.debounce(function(){
+  const q = this.value.trim();
+  if(!q) return;
+  const match = SIGNALS_DATA.find(s => s.patientId.toLowerCase().includes(q.toLowerCase()));
+  if(match){ Router.navigate("alertDetail", match.id); }
+}, 400));
+
+/* ============================================================
+   RENDER — Detalle de alerta (recorrido narrativo)
+   ============================================================ */
+const FLOW_STAGES = [
+  {n:1, key:"data", label:"Datos de salud"},
+  {n:2, key:"integ", label:"Integración"},
+  {n:3, key:"evol", label:"Evolución y contexto"},
+  {n:4, key:"pattern", label:"Patrón identificado"},
+  {n:5, key:"risk", label:"Valoración del riesgo"},
+  {n:6, key:"prio", label:"Priorización"},
+  {n:7, key:"evid", label:"Evidencia y explicación"},
+];
+
+function contributionRank(label){
+  const order = ["Influencia muy alta","Influencia alta","Influencia moderada","Influencia baja","Factor que redujo el riesgo"];
+  return order.indexOf(label);
+}
+
+function alertDetailSkeleton(){
+  return `
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:var(--space-4);" disabled>${Icon.arrowLeft}Volver a alertas</button>
+    <div class="card hero-card" style="display:flex; flex-direction:column; gap:10px;">
+      <div class="skeleton" style="height:14px; width:220px;"></div>
+      <div class="skeleton" style="height:28px; width:70%;"></div>
+      <div class="skeleton" style="height:14px; width:90%;"></div>
+      <div class="skeleton" style="height:14px; width:60%;"></div>
+    </div>
+    <p class="text-aux" style="margin-top:var(--space-4);">Generando explicación con IA (Gemini)…</p>
+  `;
+}
+
+function renderAlertDetail(id){
+  const s = getSignal(id);
+  const view = document.getElementById("view-alertDetail");
+  if(!s){
+    view.innerHTML = `<div class="empty-state">${Icon.emptyBox}<p style="font-weight:600;">Alerta no encontrada</p><a href="#/alerts">Volver a alertas</a></div>`;
+    return;
+  }
+  if(!s.variables){
+    // Solo tenemos el resumen (lista); el detalle completo con la explicación
+    // de Gemini se pide de forma perezosa al backend y se cachea.
+    view.innerHTML = alertDetailSkeleton();
+    fetchSignalDetail(id).then(detail=>{
+      if(!detail){
+        view.innerHTML = `<div class="empty-state">${Icon.emptyBox}<p style="font-weight:600;">No se pudo cargar el detalle de esta alerta</p><p class="text-aux">Verifica que el backend de HealthSignal LATAM esté disponible.</p><a href="#/alerts">Volver a alertas</a></div>`;
+        return;
+      }
+      if(AppState.currentRoute.name === "alertDetail" && AppState.currentRoute.params.id === id) renderAlertDetail(id);
+    });
+    return;
+  }
+  markDemoStep("select"); markDemoStep("what"); markDemoStep("vars"); markDemoStep("evol"); markDemoStep("pattern"); markDemoStep("why");
+
+  if(!AppState.detailView[id]) AppState.detailView[id] = "simple";
+  const isTech = AppState.detailView[id] === "technical";
+  const review = getReview(s.id);
+  const history = AppState.auditLog[s.id] || [];
+  const sortedVars = [...s.variables].sort((a,b)=> b.contribution - a.contribution);
+
+  view.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="backToAlerts" style="margin-bottom:var(--space-4);">${Icon.arrowLeft}Volver a alertas</button>
+
+    <div class="flow-strip" role="list" aria-label="Flujo de análisis de la alerta">
+      ${FLOW_STAGES.map(f=>`<div class="flow-step" data-scroll="stage-${f.key}" data-tip="${flowTip(f.key,s)}" role="listitem"><span class="flow-step-num">${f.n}</span>${f.label}</div>`).join("")}
+    </div>
+
+    <div class="detail-grid">
+      <div class="story">
+
+        <!-- BLOQUE 1 -->
+        <div class="card hero-card" id="stage-data">
+          <div class="hero-top">
+            <div>
+              <div class="hero-patient">Paciente ${s.patientId} · ${fmtPatientMeta(s.patientAge, s.patientProgram)}</div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                ${priorityBadge(s.priority)}
+                ${s.isDemo ? '<span class="badge badge-info">Alerta de demostración</span>' : ""}
+                <span class="text-aux">Generada: ${Utils.fmtDateTime(s.decisionDatetime)}</span>
+              </div>
+            </div>
+            <div>
+              <select class="review-select" id="reviewStatusSelect" aria-label="Estado de revisión" style="width:200px;">
+                <option value="pending" ${review.status==="pending"?"selected":""}>Pendiente de revisión</option>
+                <option value="in_review" ${review.status==="in_review"?"selected":""}>En revisión</option>
+                <option value="reviewed" ${review.status==="reviewed"?"selected":""}>Revisada</option>
+                <option value="followup" ${review.status==="followup"?"selected":""}>En seguimiento</option>
+                <option value="escalated" ${review.status==="escalated"?"selected":""}>Escalada</option>
+              </select>
+            </div>
+          </div>
+          <div class="hero-metrics">
+            <div><div class="hero-metric-label">Puntaje de riesgo</div><div class="hero-metric-value">${s.riskScore.toFixed(2)}</div></div>
+            <div><div class="hero-metric-label">Nivel de confianza</div><div class="hero-metric-value">${s.confidence!=null ? Math.round(s.confidence*100)+"%" : "—"}</div></div>
+            <div><div class="hero-metric-label">Prioridad</div><div class="hero-metric-value" style="font-size:16px;">${Utils.priorityLabel(s.priority)}</div></div>
+          </div>
+          <p class="hero-headline">${Utils.escapeHtml(s.headline)}</p>
+          <div class="disclaimer">${Icon.shield}<span>Herramienta de apoyo a la decisión. Esta alerta no constituye un diagnóstico ni reemplaza la evaluación del profesional de salud.</span></div>
+        </div>
+
+        <div class="card card-pad" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <span class="text-secondary" style="font-size:12.5px;">Vista sencilla: lenguaje cotidiano. Detalles técnicos: campos completos del modelo.</span>
+          <div class="view-toggle" id="viewToggle">
+            <button data-mode="simple" class="${!isTech?"is-active":""}">Vista sencilla</button>
+            <button data-mode="technical" class="${isTech?"is-active":""}">Detalles técnicos</button>
+          </div>
+        </div>
+
+        <!-- BLOQUE 2 -->
+        <div class="card card-pad" id="stage-integ">
+          <div class="block-title"><span class="block-num">2</span><h2>Qué ocurrió</h2></div>
+          <p style="font-size:14px; line-height:1.6; margin-bottom:var(--space-4);">${Utils.escapeHtml(s.whatHappened)}</p>
+          <div class="factor-meta">
+            <div class="factor-meta-item">Periodo observado: <b>${Utils.fmtDateTime(s.evidenceStart)} – ${Utils.fmtDateTime(s.evidenceEnd)}</b></div>
+            <div class="factor-meta-item">Registros considerados: <b>${s.periodRecords}</b></div>
+            <div class="factor-meta-item">Inicio del cambio: <b>${s.changeStart ? Utils.fmtDateTime(s.changeStart) : "No disponible"}</b></div>
+          </div>
+          <p class="text-secondary" style="font-size:12.5px; margin-top:10px;">${Utils.escapeHtml(s.persistence)}</p>
+        </div>
+
+        <!-- BLOQUE 3 -->
+        <div class="card card-pad" id="stage-evol-vars">
+          <div class="block-title"><span class="block-num">3</span><h2>Factores que explican esta alerta</h2></div>
+          <div>
+            ${sortedVars.map(v=>{
+              const di = directionIcon(v.direction);
+              return `<div class="factor-row">
+                <div class="factor-dir" style="color:${di.color};">${di.svg}</div>
+                <div>
+                  <div class="factor-name">${v.name} ${isTech ? `<span class="factor-code">${v.code}</span>`:""}</div>
+                  <div class="factor-explain">${Utils.escapeHtml(v.explain)}</div>
+                  <div class="factor-meta">
+                    <div class="factor-meta-item">Último valor: <b>${v.lastValue || "No disponible"}</b></div>
+                    <div class="factor-meta-item">Referencia: <b>${v.ref}</b></div>
+                    <div class="factor-meta-item">Dirección: <b>${v.direction || "No disponible en este contrato de datos"}</b></div>
+                    ${isTech ? `<div class="factor-meta-item">Contribución (técnica): <b>${v.contribution.toFixed(2)}</b></div>` : ""}
+                  </div>
+                </div>
+                <div class="influence-badge"><span class="badge ${v.contributionLabel.includes("redujo")?"badge-low":(contributionRank(v.contributionLabel)<=1?"badge-high":"badge-medium")}">${v.contributionLabel}</span></div>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>
+
+        <!-- BLOQUE 4 -->
+        <div class="card card-pad" id="stage-evol">
+          <div class="block-title"><span class="block-num">4</span><h2>Cómo evolucionaron</h2></div>
+          ${sortedVars.slice(0, isTech ? sortedVars.length : 2).map(v => variableChart(v, s, isTech)).join("")}
+        </div>
+
+        <!-- BLOQUE 5 -->
+        <div class="card card-pad" id="stage-pattern">
+          <div class="block-title"><span class="block-num">5</span><h2>Patrón observado</h2></div>
+          <div class="pattern-card">
+            <div class="pattern-icon">${Icon.activity}</div>
+            <div>
+              <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${Utils.escapeHtml(s.pattern)}</div>
+              <div class="text-secondary" style="font-size:13px; line-height:1.6;">${Utils.escapeHtml(s.patternExplain)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 6 -->
+        <div class="card card-pad why-card" id="stage-risk">
+          <div class="block-title"><span class="block-num">6</span><h2>¿Por qué esta prioridad?</h2></div>
+          <div class="why-score-row">
+            <div class="why-score"><div class="why-score-value">${s.riskScore.toFixed(2)}</div><div class="why-score-label">Puntaje de riesgo</div></div>
+            <div class="why-score"><div class="why-score-value">${Utils.priorityLabel(s.priority)}</div><div class="why-score-label">Prioridad asignada</div></div>
+            <div class="why-score"><div class="why-score-value">${s.confidence!=null ? Math.round(s.confidence*100)+"%" : "—"}</div><div class="why-score-label">Nivel de confianza</div></div>
+          </div>
+          <div class="factor-list">
+            ${s.increasedFactors.map(f=>`<div class="factor-list-item up">${Icon.trendUp}<span>${Utils.escapeHtml(f)}</span></div>`).join("")}
+            ${s.decreasedFactors.map(f=>`<div class="factor-list-item down">${Icon.trendDown}<span>${Utils.escapeHtml(f)}</span></div>`).join("")}
+          </div>
+          <div class="text-secondary" style="font-size:12.5px; margin-bottom:4px;"><b style="color:var(--color-text);">Calidad de la información: </b>${Utils.escapeHtml(s.dataQualityNote)}</div>
+          <div class="why-rule">${Utils.escapeHtml(s.generalRule)}</div>
+          <p class="why-summary">${Utils.escapeHtml(s.priorityReason)}</p>
+        </div>
+
+        <!-- EXPLICACIÓN GENERADA POR IA (separada de la evidencia, ver bloque de trazabilidad más abajo) -->
+        <div class="card card-pad" id="stage-ai-trace">
+          <div class="block-title">${Icon.puzzle}<h2>Explicación generada por IA</h2></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:var(--space-3);">
+            <span class="badge ${s.explanationSource==="llm" ? "badge-info" : "badge-neutral"}">
+              ${s.explanationSource==="llm" ? "Redactado con asistencia de IA (Gemini)" : s.explanationSource==="template_fallback" ? "Plantilla determinista — IA no disponible" : "Datos de demostración"}
+            </span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" id="toggleRawExplanation">Ver explicación técnica (sin IA)</button>
+              ${dataSource==="live" ? `<button class="btn btn-secondary btn-sm" id="btnRegenerateExplanation">Regenerar con IA</button>` : ""}
+            </div>
+          </div>
+          <div class="tech-panel" id="rawExplanationPanel">
+            <div class="tech-row"><span>Explicación determinista (fuente de la reformulación)</span></div>
+            <p style="font-size:12.5px; color:var(--color-text-secondary); line-height:1.6; margin-top:6px;">${Utils.escapeHtml(s.explanationRaw || "No disponible para datos de demostración.")}</p>
+          </div>
+          <p class="text-aux" style="margin-top:var(--space-3);">El texto generado por IA solo reformula esta explicación técnica: no agrega cifras nuevas ni reemplaza la evidencia trazable de abajo.</p>
+        </div>
+
+        <!-- TRAZABILIDAD -->
+        <div class="card card-pad" id="stage-evid">
+          <div class="block-title">${Icon.database}<h2>Trazabilidad de la alerta</h2></div>
+          <p class="text-secondary" style="font-size:12.5px; margin-bottom:var(--space-4);">
+            <span class="mono">${s.id}</span> → explicación → variables → evidencias → fuente y registro original.
+            <span data-tip="El sistema solo utiliza información que ya estaba disponible antes del momento de decisión. Un dato ocurrido antes, pero disponible después de la decisión, no se presenta como evidencia usada." style="text-decoration:underline dotted; cursor:help;">¿Qué significa "disponible" vs. "ocurrido"?</span>
+          </p>
+          <div class="trace-tree">
+            <div class="trace-alert-node">${Icon.alert}${s.id} · ${Utils.priorityLabel(s.priority)}</div>
+            ${sortedVars.map((v,vi)=> traceFactorBlock(v, s, vi)).join("")}
+            ${contextEvidenceBlock(s)}
+          </div>
+        </div>
+
+        <!-- HISTORIAL DE ATENCIÓN -->
+        <div class="card card-pad">
+          <div class="block-title">${Icon.clock}<h2>Historial de atención</h2></div>
+          <p class="text-aux" style="margin-bottom:var(--space-3);">Simulación funcional del prototipo — no constituye una auditoría legal ni de producción.</p>
+          <div id="historyList">${history.length ? history.map(h=>`
+            <div class="history-item">
+              <div class="history-item-top"><span>${h.action}</span><span class="text-aux" style="font-weight:400;">${Utils.fmtDateTime(h.at)}</span></div>
+              <div class="history-item-meta">${h.user} (${h.role}) · ${reviewLabel(h.from)} → ${reviewLabel(h.to)}${h.note ? " · Nota: "+Utils.escapeHtml(h.note) : ""}</div>
+            </div>`).join("") : `<p class="text-aux">Aún no se registran acciones sobre esta alerta.</p>`}</div>
+        </div>
+
+      </div>
+
+      <!-- ASIDE -->
+      <aside>
+        <div class="card card-pad aside-card">
+          <h3>Acción recomendada</h3>
+          <div class="action-group">
+            <button class="btn btn-primary btn-block" id="btnMarkReviewed">Marcar como revisada</button>
+            <button class="btn btn-secondary btn-block" id="btnFollowup">Dar seguimiento</button>
+            <button class="btn btn-secondary btn-block" id="btnEscalate" style="color:var(--color-critical); border-color:#FCA5A5;">Escalar según protocolo</button>
+          </div>
+        </div>
+        <div class="card card-pad aside-card">
+          <h3>Fuentes utilizadas</h3>
+          <ul style="display:flex; flex-direction:column; gap:8px;">
+            ${[...new Set(s.evidence.map(e=>e.sourceFile))].map(f=>`<li style="display:flex; align-items:center; gap:8px; font-size:12.5px;">${Icon.file}<span class="mono">${f}</span></li>`).join("")}
+          </ul>
+        </div>
+        ${isTech ? `<div class="card card-pad aside-card">
+          <h3>Detalles técnicos</h3>
+          <div class="tech-row"><span>signal_id</span><span>${s.id}</span></div>
+          <div class="tech-row"><span>patient_id</span><span>${s.patientId}</span></div>
+          <div class="tech-row"><span>risk_score</span><span>${s.riskScore}</span></div>
+          <div class="tech-row"><span>confidence_score</span><span>${s.confidence}</span></div>
+          <div class="tech-row"><span>model_version</span><span>rules_v0.1+iforest_v0.1-mock</span></div>
+          <div class="tech-row"><span>evidence_start</span><span>${s.evidenceStart}</span></div>
+          <div class="tech-row"><span>evidence_end</span><span>${s.evidenceEnd}</span></div>
+          <div class="tech-row"><span>decision_datetime</span><span>${s.decisionDatetime}</span></div>
+        </div>` : ""}
+      </aside>
+    </div>
+  `;
+
+  document.getElementById("backToAlerts").addEventListener("click", ()=> Router.navigate("alerts"));
+  document.getElementById("toggleRawExplanation").addEventListener("click", ()=>{
+    document.getElementById("rawExplanationPanel").classList.toggle("is-open");
+  });
+  const regenBtn = document.getElementById("btnRegenerateExplanation");
+  if(regenBtn){
+    regenBtn.addEventListener("click", async ()=>{
+      regenBtn.classList.add("is-loading"); regenBtn.disabled = true;
+      try{
+        await regenerateSignalExplanation(id);
+        toast("Explicación regenerada con Gemini.");
+        renderAlertDetail(id);
+      }catch(err){
+        console.warn("No se pudo regenerar la explicación.", err);
+        toast("No se pudo regenerar la explicación: el backend no respondió.", "info");
+        regenBtn.classList.remove("is-loading"); regenBtn.disabled = false;
+      }
+    });
+  }
+  document.querySelectorAll("#viewToggle button").forEach(b=>{
+    b.addEventListener("click", ()=>{ AppState.detailView[id] = b.getAttribute("data-mode"); renderAlertDetail(id); });
+  });
+  document.querySelectorAll(".flow-step").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const target = document.getElementById(el.getAttribute("data-scroll"));
+      if(target) target.scrollIntoView({behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+    });
+  });
+  document.querySelectorAll(".trace-factor-head").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      el.nextElementSibling.classList.toggle("is-open");
+      markDemoStep("trace");
+    });
+  });
+  document.getElementById("reviewStatusSelect").addEventListener("change", function(){
+    const prevLabel = reviewLabel(getReview(id).status);
+    setReviewStatus(id, this.value, "");
+    toast(`Estado actualizado a "${reviewLabel(this.value)}".`);
+    markDemoStep("review");
+    renderAlertDetail(id);
+  });
+  document.getElementById("btnMarkReviewed").addEventListener("click", ()=>{
+    setReviewStatus(id, "reviewed", "Revisión clínica completada.");
+    toast("Alerta marcada como revisada."); markDemoStep("review"); renderAlertDetail(id);
+  });
+  document.getElementById("btnFollowup").addEventListener("click", ()=>{
+    setReviewStatus(id, "followup", "Se deja en seguimiento activo.");
+    toast("Alerta marcada para seguimiento."); markDemoStep("review"); renderAlertDetail(id);
+  });
+  document.getElementById("btnEscalate").addEventListener("click", ()=>{
+    confirmModal("Escalar según protocolo", "Esta acción notificará al equipo de respuesta según el protocolo del centro. ¿Deseas continuar?", ()=>{
+      setReviewStatus(id, "escalated", "Escalada según protocolo del centro.");
+      toast("Alerta escalada según protocolo.");
+      markDemoStep("review");
+      renderAlertDetail(id);
+    });
+  });
+}
+
+function flowTip(key, s){
+  const map = {
+    data: "Registros y fuentes utilizados: " + [...new Set(s.evidence.map(e=>e.sourceFile))].join(", "),
+    integ: "Unión de información proveniente de distintas fuentes de monitoreo y contexto.",
+    evol: "Comportamiento temporal del paciente durante la ventana analizada.",
+    pattern: s.pattern,
+    risk: "Puntaje calculado: " + s.riskScore.toFixed(2),
+    prio: "Categoría asignada: " + Utils.priorityLabel(s.priority),
+    evid: "Registros exactos que sustentan el resultado.",
+  };
+  return Utils.escapeHtml(map[key] || "");
+}
+
+function traceFactorBlock(v, s, idx){
+  const relatedEvidence = s.evidence.filter(e => e.variableCode === v.code);
+  if(relatedEvidence.length === 0) return "";
+  return `<div class="trace-factor">
+    <div class="trace-factor-head">
+      <div class="trace-factor-head-left">${v.name} <span class="badge badge-neutral">${v.contributionLabel}</span></div>
+      <span style="color:var(--color-text-secondary);">${Icon.chevronDown}</span>
+    </div>
+    <div class="trace-evidences ${idx===0?"is-open":""}">
+      ${relatedEvidence.map(e=>evidenceCard(e)).join("")}
+    </div>
+  </div>`;
+}
+function contextEvidenceBlock(s){
+  const ctx = s.evidence.filter(e => !e.variableCode);
+  if(ctx.length === 0) return "";
+  return `<div class="trace-factor">
+    <div class="trace-factor-head">
+      <div class="trace-factor-head-left">Información de contexto adicional</div>
+      <span style="color:var(--color-text-secondary);">${Icon.chevronDown}</span>
+    </div>
+    <div class="trace-evidences">${ctx.map(e=>evidenceCard(e)).join("")}</div>
+  </div>`;
+}
+function evidenceCard(e){
+  return `<div class="trace-evidence">
+    <div class="trace-evidence-field"><span class="k">Fuente</span><span class="v mono">${e.sourceFile}</span></div>
+    <div class="trace-evidence-field"><span class="k">Registro</span><span class="v mono">${e.recordId}</span></div>
+    <div class="trace-evidence-field"><span class="k">Rol</span><span class="v">${e.roleLabel} <span class="text-aux">(${e.role})</span></span></div>
+    <div class="trace-evidence-field"><span class="k">Contribución</span><span class="v">${e.contribution!=null ? e.contribution.toFixed(2) : "—"}</span></div>
+    <div class="trace-evidence-field" style="grid-column:1/-1;">
+      <span class="k">Línea temporal</span>
+      <div class="timeline-mini">
+        <span class="timeline-dot event"></span>Ocurrió: ${Utils.fmtDateTime(e.eventDatetime)}
+        <span style="margin:0 4px;">·</span>
+        <span class="timeline-dot avail"></span>Disponible: ${Utils.fmtDateTime(e.availableDatetime)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function variableChart(v, s, isTech){
+  // Serie sintética hacia el último valor, solo para representar la tendencia (no son lecturas reales adicionales)
+  const w = 560, h = 90, padL = isTech?36:8, padR=8, padT=14, padB=isTech?18:8;
+  const n = 10;
+  const trendUp = /aument/.test(v.direction);
+  const trendDown = /disminuy/.test(v.direction);
+  let series = [];
+  let base = 50;
+  for(let i=0;i<n;i++){
+    const t = i/(n-1);
+    let val = base;
+    if(trendUp) val = base + t*38 + Math.sin(i*1.3)*2;
+    else if(trendDown) val = base - t*30 + Math.sin(i*1.3)*2;
+    else val = base + Math.sin(i*1.1)*6;
+    series.push(val);
+  }
+  const min = Math.min(...series), max = Math.max(...series);
+  const range = (max-min) || 1;
+  const stepX = (w-padL-padR)/(n-1);
+  const pts = series.map((v2,i)=>({ x: padL+i*stepX, y: padT + (1-((v2-min)/range))*(h-padT-padB) }));
+  const path = pts.map((p,i)=>(i===0?"M":"L")+p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ");
+  const color = trendUp ? "var(--color-high)" : trendDown ? "var(--color-info)" : "var(--color-text-secondary)";
+  const markStartX = padL, markEndX = w-padR;
+  return `<div class="chart-card">
+    <div class="chart-head">
+      <span class="chart-title">${v.name}</span>
+      <span class="chart-meta">${v.unit} · ${Utils.fmtDateTime(s.evidenceStart)} – ${Utils.fmtDateTime(s.evidenceEnd)}</span>
+    </div>
+    <div class="chart-svg-wrap">
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Evolución de ${v.name}: ${v.direction || "dirección no disponible"}, valor actual ${v.lastValue || "no disponible"}">
+        <line x1="${markStartX}" y1="${h-padB}" x2="${markEndX}" y2="${h-padB}" stroke="#E2E8F0" stroke-width="1"/>
+        <line x1="${markStartX}" y1="${padT}" x2="${markStartX}" y2="${h-padB}" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="2,2"/>
+        <line x1="${markEndX}" y1="${padT}" x2="${markEndX}" y2="${h-padB}" stroke="#0F766E" stroke-width="1" stroke-dasharray="2,2"/>
+        <path d="${path}" fill="none" stroke="${color}" stroke-width="2.25"/>
+        <circle cx="${pts[pts.length-1].x}" cy="${pts[pts.length-1].y}" r="4" fill="${color}"/>
+        ${isTech ? `<text x="${markStartX}" y="${h-4}" font-size="9" fill="#64748B">inicio ventana</text><text x="${markEndX}" y="${h-4}" text-anchor="end" font-size="9" fill="#115E59">decisión</text>` : ""}
+      </svg>
+    </div>
+    <p class="chart-explain">${Utils.escapeHtml(v.explain)}</p>
+  </div>`;
+}
+
+/* ============================================================
+   RENDER — Pacientes
+   ============================================================ */
+function renderPatientsList(){
+  const ids = [...new Set(SIGNALS_DATA.map(s=>s.patientId))];
+  document.getElementById("patientsList").innerHTML = ids.map(pid=>{
+    const alerts = SIGNALS_DATA.filter(s=>s.patientId===pid);
+    const worst = alerts.some(a=>a.priority==="CRITICAL") ? "CRITICAL" : alerts.some(a=>a.priority==="HIGH") ? "HIGH" : alerts.some(a=>a.priority==="MEDIUM") ? "MEDIUM" : "LOW";
+    return `<div class="patient-card" data-open-patient="${pid}" tabindex="0" role="button">
+      <div class="patient-avatar">${pid.slice(4)}</div>
+      <div style="flex:1;">
+        <div style="font-weight:600; font-size:13.5px;">${pid}</div>
+        <div class="text-aux">${fmtPatientMeta(alerts[0].patientAge, alerts[0].patientProgram)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="text-aux" style="margin-bottom:4px;">${alerts.length} alerta(s)</div>
+        ${priorityBadge(worst)}
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("[data-open-patient]").forEach(el=>{
+    el.addEventListener("click", ()=> Router.navigate("patientDetail", el.getAttribute("data-open-patient")));
+    el.addEventListener("keydown", (e)=>{ if(e.key==="Enter") el.click(); });
+  });
+}
+
+function renderPatientDetail(pid){
+  const view = document.getElementById("view-patientDetail");
+  const alerts = SIGNALS_DATA.filter(s=>s.patientId===pid);
+  if(alerts.length===0){ view.innerHTML = `<div class="empty-state">${Icon.emptyBox}<p>Paciente no encontrado.</p></div>`; return; }
+  view.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="backToPatients" style="margin-bottom:var(--space-4);">${Icon.arrowLeft}Volver a pacientes</button>
+    <div class="card card-pad" style="margin-bottom:var(--space-6); display:flex; align-items:center; gap:var(--space-4);">
+      <div class="patient-avatar" style="width:56px;height:56px;font-size:16px;">${pid.slice(4)}</div>
+      <div>
+        <div class="h2" style="font-size:18px;">${pid}</div>
+        <div class="text-secondary" style="font-size:13px;">${fmtPatientMeta(alerts[0].patientAge, alerts[0].patientProgram)}</div>
+      </div>
+    </div>
+    <h2 class="h2" style="font-size:15px; margin-bottom:var(--space-3);">Alertas asociadas</h2>
+    <div class="card">${alerts.map(a=>alertListRow(a)).join("")}</div>
+  `;
+  document.getElementById("backToPatients").addEventListener("click", ()=>Router.navigate("patients"));
+  attachRowHandlers(view);
+}
+
+/* ============================================================
+   RENDER — Seguimiento
+   ============================================================ */
+function renderFollowup(){
+  const tracked = SIGNALS_DATA.filter(s => ["followup","escalated"].includes(getReview(s.id).status));
+  const el = document.getElementById("followupList");
+  if(tracked.length===0){
+    el.innerHTML = `<div class="empty-state">${Icon.emptyBox}<p style="font-weight:600;">Sin alertas en seguimiento</p><p class="text-aux">Las alertas que marques como "Dar seguimiento" o "Escalar" aparecerán aquí.</p></div>`;
+    return;
+  }
+  el.innerHTML = tracked.map(s=>alertListRow(s)).join("");
+  attachRowHandlers(el);
+}
+
+/* ============================================================
+   BREADCRUMBS + ROUTER RENDER
+   ============================================================ */
+const ROUTE_LABELS = {
+  dashboard:"Inicio", alerts:"Alertas", alertDetail:"Detalle de alerta",
+  patients:"Pacientes", patientDetail:"Ficha de paciente", followup:"Seguimiento",
+  profile:"Perfil", settings:"Configuración",
+};
+
+function renderBreadcrumbs(){
+  const { name, params } = AppState.currentRoute;
+  const bc = document.getElementById("breadcrumbs");
+  let parts = [`<a href="#/dashboard">Inicio</a>`];
+  if(name === "alerts") parts = [`<a href="#/dashboard">Inicio</a>`,`<span class="current">Alertas</span>`];
+  else if(name === "alertDetail") parts = [`<a href="#/dashboard">Inicio</a>`,`<a href="#/alerts">Alertas</a>`,`<span class="current">${params.id||""}</span>`];
+  else if(name === "patients") parts = [`<a href="#/dashboard">Inicio</a>`,`<span class="current">Pacientes</span>`];
+  else if(name === "patientDetail") parts = [`<a href="#/dashboard">Inicio</a>`,`<a href="#/patients">Pacientes</a>`,`<span class="current">${params.id||""}</span>`];
+  else if(name === "followup") parts = [`<a href="#/dashboard">Inicio</a>`,`<span class="current">Seguimiento</span>`];
+  else if(name === "profile") parts = [`<a href="#/dashboard">Inicio</a>`,`<span class="current">Perfil</span>`];
+  else if(name === "settings") parts = [`<a href="#/dashboard">Inicio</a>`,`<span class="current">Configuración</span>`];
+  else parts = [`<span class="current">Inicio</span>`];
+  bc.innerHTML = parts.join(`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"/></svg>`);
+  document.title = "HealthSignal LATAM — " + (ROUTE_LABELS[name] || "Consola");
+}
+
+function setActiveNav(name){
+  const navKey = ["alertDetail"].includes(name) ? "alerts" : ["patientDetail"].includes(name) ? "patients" : name;
+  document.querySelectorAll(".nav-item[data-nav]").forEach(el=>{
+    el.classList.toggle("is-active", el.getAttribute("data-nav") === navKey);
+  });
+}
+
+function render(){
+  const { name, params } = AppState.currentRoute;
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("is-active"));
+  const viewEl = document.getElementById("view-" + name);
+  if(viewEl) viewEl.classList.add("is-active");
+  renderBreadcrumbs();
+  setActiveNav(name);
+
+  if(name === "dashboard") renderDashboard();
+  else if(name === "alerts") renderAlertsList(true);
+  else if(name === "alertDetail") renderAlertDetail(params.id);
+  else if(name === "patients") renderPatientsList();
+  else if(name === "patientDetail") renderPatientDetail(params.id);
+  else if(name === "followup") renderFollowup();
+  else if(!["profile","settings"].includes(name)){
+    location.hash = "#/dashboard";
+  }
+}
+</script>
+</body>
+</html>

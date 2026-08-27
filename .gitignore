@@ -1,2 +1,16 @@
 data/raw/
 data/processed/timeline_df.csv
+
+.DS_Store
+
+# Entornos y credenciales
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Cache local del pipeline de explicaciones (LLM)
+data/cache/
