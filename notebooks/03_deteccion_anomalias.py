@@ -4,10 +4,21 @@ HealthSignal LATAM - Deteccion de anomalias v2 (Isolation Forest + compuertas)
 v1 detectaba. v2 discrimina: separa deterioro fisiologico de contexto,
 artefacto de sensor y variacion transitoria, sin borrar nada.
 
-Entradas : processed_data/features_df.csv
-           processed_data/calidad_por_ventana.csv   (generado por recuperar_calidad.py)
+Entradas : data/processed/features_df.csv
+           data/processed/calidad_por_ventana.csv   (generado por recuperar_calidad.py)
 Salidas  : outputs/alertas_v2.csv, outputs/metricas_v2.csv,
-           outputs/barrido_v2.csv, outputs/ablacion_v2.csv
+           outputs/barrido_v2.csv, outputs/ablacion_v2.csv, outputs/signals.csv
+
+outputs/signals.csv ya sale en el formato EXACTO del kit de entrega oficial
+(ver validate_submission.py): signal_id, patient_id, decision_datetime,
+risk_score, priority_level, evidence_start, evidence_end, explanation,
+model_version, confidence_score. risk_score y priority_level NO son un modelo
+nuevo -- son una traduccion de escala del mismo prioridad_score ya calculado
+por las compuertas (ver construir_signals_csv). Este archivo todavia NO
+reemplaza submission_kit/signals.csv a proposito: falta construir
+evidence.csv (requiere volver a timeline_df.csv por record_id reales) antes
+de mover los dos juntos al kit -- mientras tanto el kit sigue con el mock
+para no romper el dashboard/backend que ya lo consume.
 
 Cadena:  saneamiento -> features -> Isolation Forest -> 4 compuertas -> prioridad
 """
@@ -33,17 +44,17 @@ EXPLICABLES_POR_ACTIVIDAD = {'HR', 'RR'}
 
 # ----------------------------------------------------------------- saneamiento
 def cargar_y_sanear():
-    df = pd.read_csv('processed_data/features_df.csv', low_memory=False)
+    df = pd.read_csv('data/processed/features_df.csv', low_memory=False)
     df = df.sort_values(['patient_id', 'window_start']).reset_index(drop=True)
     for c in ('window_start', 'window_end'):
         df[c] = pd.to_datetime(df[c])
     df['idx_ventana'] = df.groupby('patient_id').cumcount()
     n0 = len(df)
     df = df[df['idx_ventana'] >= MIN_VENTANA].replace([np.inf, -np.inf], np.nan).copy()
-    cal = pd.read_csv('processed_data/calidad_por_ventana.csv')
+    cal = pd.read_csv('data/processed/calidad_por_ventana.csv')
     df = df.merge(cal[['window_id', 'pct_flagged', 'n_check', 'n_low_signal',
                        'n_retransmitted']], on='window_id', how='left')
-    iv = pd.read_csv('processed_data/intraventana.csv').drop(columns=['patient_id'])
+    iv = pd.read_csv('data/processed/intraventana.csv').drop(columns=['patient_id'])
     df = df.merge(iv, on='window_id', how='left')
     print(f"[saneamiento] {n0} -> {len(df)} ventanas | "
           f"calidad + forma intra-ventana recuperadas del crudo")
@@ -172,6 +183,57 @@ def narrar(r):
     return txt
 
 
+# --------------------------------------------------- submission kit: signals.csv
+def construir_signals_csv(al):
+    """Mapea las alertas internas (al) al formato EXACTO de signals.csv que exige
+    validate_submission.py. risk_score y priority_level NO son un modelo nuevo:
+    son una traduccion de escala del mismo prioridad_score que ya calculan las
+    3 compuertas (contexto, calidad, persistencia) mas arriba.
+
+    risk_score: percentil (rank pct) de prioridad_score dentro de las alertas
+    detectadas. Se prefiere sobre min-max porque un solo outlier extremo no
+    aplasta la escala de todas las demas -- coherente con que priority_level
+    tambien se define por cuantiles.
+
+    priority_level: se extiende el mismo corte que ya usa 'prioridad'
+    (cuantiles 0.60 / 0.85 -> BAJA/MEDIA/ALTA) agregando un tercer corte en
+    0.97 para separar CRITICAL de HIGH dentro de lo que hoy es 'ALTA'. Sigue
+    siendo el mismo criterio de umbral por cuantil, no una regla nueva.
+
+    confidence_score (opcional): 1 - pct_flagged de la ventana, como proxy
+    simple de cuanta confianza dar a la lectura que origino la alerta.
+    """
+    out = pd.DataFrame(index=al.index)
+    out['signal_id'] = 'SIG-' + al['patient_id'].astype(str) + '-' + al['window_id'].astype(str)
+    out['patient_id'] = al['patient_id']
+    out['decision_datetime'] = al['window_end']
+    out['risk_score'] = al['prioridad_score'].rank(pct=True).round(4)
+
+    q_med, q_high, q_crit = al['prioridad_score'].quantile([0.60, 0.85, 0.97]).values
+    out['priority_level'] = np.select(
+        [al['prioridad_score'] >= q_crit, al['prioridad_score'] >= q_high,
+         al['prioridad_score'] >= q_med],
+        ['CRITICAL', 'HIGH', 'MEDIUM'], default='LOW')
+
+    out['evidence_start'] = al['window_start']
+    out['evidence_end'] = al['window_end']
+    out['explanation'] = al['explicacion']
+    out['model_version'] = 'rules_v2+iforest_v2'
+    out['confidence_score'] = (1 - al['pct_flagged'].fillna(0)).clip(0, 1).round(4)
+
+    for c in ('decision_datetime', 'evidence_start', 'evidence_end'):
+        out[c] = pd.to_datetime(out[c]).dt.strftime('%Y-%m-%dT%H:%M:%S')
+
+    assert out['signal_id'].is_unique, "signal_id duplicado -- revisar patient_id+window_id"
+    assert out['risk_score'].between(0, 1).all(), "risk_score fuera de [0,1]"
+    assert out['priority_level'].isin(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).all()
+    assert (out['explanation'].str.len() > 0).all(), "explanation vacia"
+    assert (pd.to_datetime(out['evidence_start']) <= pd.to_datetime(out['evidence_end'])).all()
+    assert (pd.to_datetime(out['evidence_end']) <= pd.to_datetime(out['decision_datetime'])).all()
+    return out[['signal_id', 'patient_id', 'decision_datetime', 'risk_score', 'priority_level',
+                'evidence_start', 'evidence_end', 'explanation', 'model_version', 'confidence_score']]
+
+
 # -------------------------------------------------- estudio de transformaciones
 def ablacion_transformaciones(df, feats):
     """Responde 'que transformacion es NECESARIA' con evidencia, no por defecto.
@@ -285,6 +347,13 @@ def main():
                'context_physical_activity', 'context_sleep_state', 'age_years',
                'baseline_risk_profile', 'encounter_type', 'med_active'])
     al[cols].to_csv('outputs/alertas_v2.csv', index=False)
+
+    signals = construir_signals_csv(al)
+    signals.to_csv('outputs/signals.csv', index=False)
+    print(f"\n[submission kit] outputs/signals.csv ({len(signals)} filas, formato validado "
+          f"contra las reglas de validate_submission.py) -- todavia NO copiado a "
+          f"submission_kit/ (falta evidence.csv, ver docstring del modulo)")
+    print(signals['priority_level'].value_counts().rename('reparto priority_level').to_string())
 
     # ---------------------------------------------------- evidencia de desempeno
     eventos = {'PAT-0633': '2026-07-15 16:00', 'PAT-0009': '2026-07-12 15:00',
