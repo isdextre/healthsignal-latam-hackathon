@@ -6,19 +6,10 @@ artefacto de sensor y variacion transitoria, sin borrar nada.
 
 Entradas : data/processed/features_df.csv
            data/processed/calidad_por_ventana.csv   (generado por recuperar_calidad.py)
+           data/processed/intraventana.csv
 Salidas  : outputs/alertas_v2.csv, outputs/metricas_v2.csv,
-           outputs/barrido_v2.csv, outputs/ablacion_v2.csv, outputs/signals.csv
-
-outputs/signals.csv ya sale en el formato EXACTO del kit de entrega oficial
-(ver validate_submission.py): signal_id, patient_id, decision_datetime,
-risk_score, priority_level, evidence_start, evidence_end, explanation,
-model_version, confidence_score. risk_score y priority_level NO son un modelo
-nuevo -- son una traduccion de escala del mismo prioridad_score ya calculado
-por las compuertas (ver construir_signals_csv). Este archivo todavia NO
-reemplaza submission_kit/signals.csv a proposito: falta construir
-evidence.csv (requiere volver a timeline_df.csv por record_id reales) antes
-de mover los dos juntos al kit -- mientras tanto el kit sigue con el mock
-para no romper el dashboard/backend que ya lo consume.
+           outputs/barrido_v2.csv, outputs/ablacion_v2.csv,
+           outputs/isolation_forest_v2.joblib
 
 Cadena:  saneamiento -> features -> Isolation Forest -> 4 compuertas -> prioridad
 """
@@ -27,27 +18,16 @@ from pathlib import Path
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
+from joblib import dump
 
 warnings.filterwarnings('ignore')
 RANDOM_STATE, MIN_VENTANA, UMBRAL_ALT = 42, 3, 1.5
-# tamano de muestra para silhouette_score: baja de 8000 a 2000 porque una matriz
-# de distancias 8000x8000 (~488 MB) revento por MemoryError en maquinas con poca
-# RAM libre. 2000x2000 (~32 MB) da una estimacion igual de valida para un
-# diagnostico de calidad de clusters -- no afecta al modelo ni a las alertas.
-SIL_SAMPLE = 2000
 
-
-def sil_seguro(X, lab):
-    """silhouette_score con degradacion segura: es una metrica solo
-    diagnostica (no afecta alertas.csv ni signals.csv), asi que si la maquina
-    no tiene memoria para la matriz de distancias no debe tumbar el pipeline
-    completo -- se reporta NaN y se sigue."""
-    try:
-        return silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
-    except MemoryError:
-        print(f"  [aviso] silhouette_score fallo por memoria (sample={SIL_SAMPLE}) "
-              f"-- se reporta NaN, no bloquea el pipeline")
-        return np.nan
+# Rutas portables: no dependen del directorio desde el que se ejecute el script.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / 'data' / 'processed'
+OUTPUTS_DIR = PROJECT_ROOT / 'outputs'
+MODEL_PATH = OUTPUTS_DIR / 'isolation_forest_v2.joblib'
 # WINSORIZADO: desactivado. Decision empirica, no por defecto -- ver
 # ablacion_transformaciones() y outputs/ablacion_v2.csv. Con las features
 # intra-ventana y las compuertas de calidad, el cap ya no aporta: mismos 9/10
@@ -62,17 +42,29 @@ EXPLICABLES_POR_ACTIVIDAD = {'HR', 'RR'}
 
 # ----------------------------------------------------------------- saneamiento
 def cargar_y_sanear():
-    df = pd.read_csv('data/processed/features_df.csv', low_memory=False)
+    entradas = {
+        'features': DATA_DIR / 'features_df.csv',
+        'calidad': DATA_DIR / 'calidad_por_ventana.csv',
+        'intraventana': DATA_DIR / 'intraventana.csv',
+    }
+    faltantes = [str(ruta) for ruta in entradas.values() if not ruta.is_file()]
+    if faltantes:
+        raise FileNotFoundError(
+            'No se encontraron los archivos de entrada requeridos:\n- '
+            + '\n- '.join(faltantes)
+        )
+
+    df = pd.read_csv(entradas['features'], low_memory=False)
     df = df.sort_values(['patient_id', 'window_start']).reset_index(drop=True)
     for c in ('window_start', 'window_end'):
         df[c] = pd.to_datetime(df[c])
     df['idx_ventana'] = df.groupby('patient_id').cumcount()
     n0 = len(df)
     df = df[df['idx_ventana'] >= MIN_VENTANA].replace([np.inf, -np.inf], np.nan).copy()
-    cal = pd.read_csv('data/processed/calidad_por_ventana.csv')
+    cal = pd.read_csv(entradas['calidad'])
     df = df.merge(cal[['window_id', 'pct_flagged', 'n_check', 'n_low_signal',
                        'n_retransmitted']], on='window_id', how='left')
-    iv = pd.read_csv('data/processed/intraventana.csv').drop(columns=['patient_id'])
+    iv = pd.read_csv(entradas['intraventana']).drop(columns=['patient_id'])
     df = df.merge(iv, on='window_id', how='left')
     print(f"[saneamiento] {n0} -> {len(df)} ventanas | "
           f"calidad + forma intra-ventana recuperadas del crudo")
@@ -188,7 +180,7 @@ def atribucion_local(iso, X, filas, nombres):
 
 
 def narrar(r):
-    partes = [f"{v} {'sube' if DIRECCION[v] > 0 else 'baja'} {r[f'dz_{v}']:.1f} sigma"
+    partes = [f"{v} {'sube' if DIRECCION[v] > 0 else 'baja'} {r[f'dz_{v}']:.1f}σ"
               for v in DIRECCION if r[f'dz_{v}'] > UMBRAL_ALT]
     txt = (f"{int(r['n_alteradas'])}/4 variables alteradas: " + ", ".join(partes)) \
         if partes else "patron atipico sin deterioro direccional dominante"
@@ -199,57 +191,6 @@ def narrar(r):
     if mot:
         txt += " | " + " ; ".join(mot)
     return txt
-
-
-# --------------------------------------------------- submission kit: signals.csv
-def construir_signals_csv(al):
-    """Mapea las alertas internas (al) al formato EXACTO de signals.csv que exige
-    validate_submission.py. risk_score y priority_level NO son un modelo nuevo:
-    son una traduccion de escala del mismo prioridad_score que ya calculan las
-    3 compuertas (contexto, calidad, persistencia) mas arriba.
-
-    risk_score: percentil (rank pct) de prioridad_score dentro de las alertas
-    detectadas. Se prefiere sobre min-max porque un solo outlier extremo no
-    aplasta la escala de todas las demas -- coherente con que priority_level
-    tambien se define por cuantiles.
-
-    priority_level: se extiende el mismo corte que ya usa 'prioridad'
-    (cuantiles 0.60 / 0.85 -> BAJA/MEDIA/ALTA) agregando un tercer corte en
-    0.97 para separar CRITICAL de HIGH dentro de lo que hoy es 'ALTA'. Sigue
-    siendo el mismo criterio de umbral por cuantil, no una regla nueva.
-
-    confidence_score (opcional): 1 - pct_flagged de la ventana, como proxy
-    simple de cuanta confianza dar a la lectura que origino la alerta.
-    """
-    out = pd.DataFrame(index=al.index)
-    out['signal_id'] = 'SIG-' + al['patient_id'].astype(str) + '-' + al['window_id'].astype(str)
-    out['patient_id'] = al['patient_id']
-    out['decision_datetime'] = al['window_end']
-    out['risk_score'] = al['prioridad_score'].rank(pct=True).round(4)
-
-    q_med, q_high, q_crit = al['prioridad_score'].quantile([0.60, 0.85, 0.97]).values
-    out['priority_level'] = np.select(
-        [al['prioridad_score'] >= q_crit, al['prioridad_score'] >= q_high,
-         al['prioridad_score'] >= q_med],
-        ['CRITICAL', 'HIGH', 'MEDIUM'], default='LOW')
-
-    out['evidence_start'] = al['window_start']
-    out['evidence_end'] = al['window_end']
-    out['explanation'] = al['explicacion']
-    out['model_version'] = 'rules_v2+iforest_v2'
-    out['confidence_score'] = (1 - al['pct_flagged'].fillna(0)).clip(0, 1).round(4)
-
-    for c in ('decision_datetime', 'evidence_start', 'evidence_end'):
-        out[c] = pd.to_datetime(out[c]).dt.strftime('%Y-%m-%dT%H:%M:%S')
-
-    assert out['signal_id'].is_unique, "signal_id duplicado -- revisar patient_id+window_id"
-    assert out['risk_score'].between(0, 1).all(), "risk_score fuera de [0,1]"
-    assert out['priority_level'].isin(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).all()
-    assert (out['explanation'].str.len() > 0).all(), "explanation vacia"
-    assert (pd.to_datetime(out['evidence_start']) <= pd.to_datetime(out['evidence_end'])).all()
-    assert (pd.to_datetime(out['evidence_end']) <= pd.to_datetime(out['decision_datetime'])).all()
-    return out[['signal_id', 'patient_id', 'decision_datetime', 'risk_score', 'priority_level',
-                'evidence_start', 'evidence_end', 'explanation', 'model_version', 'confidence_score']]
 
 
 # -------------------------------------------------- estudio de transformaciones
@@ -270,9 +211,9 @@ def ablacion_transformaciones(df, feats):
     filas = []
     for nombre, fn in [
         ('sin transformar', lambda z: z),
-        ('winsorizado 4sigma',  lambda z: z.clip(-4, 4)),
-        ('winsorizado 8sigma',  lambda z: z.clip(-8, 8)),
-        ('winsorizado 12sigma', lambda z: z.clip(-12, 12)),
+        ('winsorizado 4σ',  lambda z: z.clip(-4, 4)),
+        ('winsorizado 8σ',  lambda z: z.clip(-8, 8)),
+        ('winsorizado 12σ', lambda z: z.clip(-12, 12)),
         ('log1p con signo', lambda z: np.sign(z) * np.log1p(np.abs(z))),
     ]:
         t = df.copy()
@@ -284,51 +225,68 @@ def ablacion_transformaciones(df, feats):
         t['concordancia'] = t[[f'desv_{v}' for v in DIRECCION]].min(axis=1)
         X = StandardScaler().fit_transform(t[feats].values)
         m = IsolationForest(n_estimators=300, contamination=CONTAMINACION,
-                            random_state=RANDOM_STATE, n_jobs=1).fit(X)
+                            random_state=RANDOM_STATE, n_jobs=-1).fit(X)
         lab = m.predict(X)
         t['s'] = -m.score_samples(X)
         top = t.nlargest(int((lab == -1).sum()), 's')
         # cuantas del top-50 son artefacto de una sola variable
         art = (top.head(50)['n_alteradas'] <= 1).sum()
         filas.append({'transformacion': nombre,
-                      'silueta': round(sil_seguro(X, lab), 4),
+                      'silueta': round(silhouette_score(X, lab, sample_size=8000,
+                                                        random_state=0), 4),
                       'artefactos_1var_en_top50': int(art)})
     return pd.DataFrame(filas)
 
 
 # ------------------------------------------------------------------------ main
 def main():
-    Path('outputs').mkdir(exist_ok=True)
+    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     df = cargar_y_sanear()
     df, feats = construir_features(df)
     print(f"[features] {len(feats)}: {feats}")
 
-    X = StandardScaler().fit_transform(df[feats].values)   # escalado: solo para que
+    scaler = StandardScaler()
+    X = scaler.fit_transform(df[feats].values)   # escalado: solo para que
     # la silueta no quede dominada por la feature de mayor rango. Isolation Forest
     # es invariante (verificado: 438/438 anomalias identicas con y sin escalar).
 
     filas = []
     for c in (0.005, 0.01, 0.015, 0.02, 0.03, 0.05):
         m = IsolationForest(n_estimators=300, contamination=c,
-                            random_state=RANDOM_STATE, n_jobs=1).fit(X)
+                            random_state=RANDOM_STATE, n_jobs=-1).fit(X)
         lab = m.predict(X)
-        s = sil_seguro(X, lab)
+        s = silhouette_score(X, lab, sample_size=8000, random_state=0)
         filas.append({'contaminacion': c, 'silueta': round(s, 4),
                       'n_anomalias': int((lab == -1).sum()), 'cumple_0.5': s > 0.5})
     barrido = pd.DataFrame(filas)
-    barrido.to_csv('outputs/barrido_v2.csv', index=False)
+    barrido.to_csv(OUTPUTS_DIR / 'barrido_v2.csv', index=False)
     print("\n[barrido de contaminacion]"); print(barrido.to_string(index=False))
 
     abl = ablacion_transformaciones(df, feats)
-    abl.to_csv('outputs/ablacion_v2.csv', index=False)
+    abl.to_csv(OUTPUTS_DIR / 'ablacion_v2.csv', index=False)
     print("\n[estudio de transformaciones]"); print(abl.to_string(index=False))
 
     iso = IsolationForest(n_estimators=300, contamination=CONTAMINACION,
-                          random_state=RANDOM_STATE, n_jobs=1).fit(X)
+                          random_state=RANDOM_STATE, n_jobs=-1).fit(X)
+    dump({
+        'model': iso,
+        'scaler': scaler,
+        'features': feats,
+        'config': {
+            'random_state': RANDOM_STATE,
+            'min_ventana': MIN_VENTANA,
+            'umbral_alteracion': UMBRAL_ALT,
+            'cap': CAP,
+            'contaminacion': CONTAMINACION,
+            'direccion': DIRECCION,
+        },
+        'n_ventanas_entrenamiento': len(df),
+    }, MODEL_PATH)
+    print(f"[modelo] artefacto guardado en {MODEL_PATH}")
     lab = iso.predict(X)
     df['score_anomalia'] = -iso.score_samples(X)
     df['es_anomalia'] = lab == -1
-    sil = sil_seguro(X, lab)
+    sil = silhouette_score(X, lab, sample_size=8000, random_state=0)
     print(f"\n[modelo] contaminacion={CONTAMINACION} silueta={sil:.3f} "
           f"anomalias={df.es_anomalia.sum()}")
 
@@ -363,14 +321,7 @@ def main():
             + ['pct_flagged', 'n_check', 'n_low_signal', 'connectivity_flag',
                'context_physical_activity', 'context_sleep_state', 'age_years',
                'baseline_risk_profile', 'encounter_type', 'med_active'])
-    al[cols].to_csv('outputs/alertas_v2.csv', index=False)
-
-    signals = construir_signals_csv(al)
-    signals.to_csv('outputs/signals.csv', index=False)
-    print(f"\n[submission kit] outputs/signals.csv ({len(signals)} filas, formato validado "
-          f"contra las reglas de validate_submission.py) -- todavia NO copiado a "
-          f"submission_kit/ (falta evidence.csv, ver docstring del modulo)")
-    print(signals['priority_level'].value_counts().rename('reparto priority_level').to_string())
+    al[cols].to_csv(OUTPUTS_DIR / 'alertas_v2.csv', index=False)
 
     # ---------------------------------------------------- evidencia de desempeno
     eventos = {'PAT-0633': '2026-07-15 16:00', 'PAT-0009': '2026-07-12 15:00',
@@ -403,13 +354,13 @@ def main():
                    'eventos_capturados': f"{capt}/{len(eventos)}",
                    'n_features': len(feats),
                    'alertas_ALTA': int((al.prioridad == 'ALTA').sum())}]
-                 ).to_csv('outputs/metricas_v2.csv', index=False)
+                 ).to_csv(OUTPUTS_DIR / 'metricas_v2.csv', index=False)
 
     print("\n[top 10 por prioridad]")
     for _, r in al.head(10).iterrows():
         print(f"  #{r.ranking:<3} {r.prioridad:5s} {r.patient_id} {str(r.window_start)[:16]} "
               f"p={r.prioridad_score:.3f} | {r.explicacion[:96]}")
-    print(f"\n-> outputs/alertas_v2.csv ({len(al)} alertas)")
+    print(f"\n-> {OUTPUTS_DIR / 'alertas_v2.csv'} ({len(al)} alertas)")
 
 
 if __name__ == '__main__':
