@@ -1,0 +1,33 @@
+[saneamiento] 24859 -> 21859 ventanas | calidad + forma intra-ventana recuperadas del crudo
+[features] 10: ['desv_HR', 'desv_RR', 'desv_TEMP', 'desv_SpO2', 'severidad', 'n_alteradas', 'concordancia', 'discordancia_wearable', 'persistencia_intra', 'tendencia_intra']
+Traceback (most recent call last):
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\notebooks\03_deteccion_anomalias.py", line 404, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\notebooks\03_deteccion_anomalias.py", line 303, in main
+    s = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 218, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\cluster\_unsupervised.py", line 146, in silhouette_score
+    return float(np.mean(silhouette_samples(X, labels, metric=metric, **kwds)))
+                         ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\cluster\_unsupervised.py", line 310, in silhouette_samples
+    results = zip(*pairwise_distances_chunked(X, reduce_func=reduce_func, **kwds))
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 2279, in pairwise_distances_chunked
+    D_chunk = pairwise_distances(X_chunk, Y, metric=metric, n_jobs=n_jobs, **kwds)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 2488, in pairwise_distances
+    return _parallel_pairwise(X, Y, func, n_jobs, **kwds)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 1975, in _parallel_pairwise
+    return func(X, Y, **kwds)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 373, in euclidean_distances
+    return _euclidean_distances(X, Y, X_norm_squared, Y_norm_squared, squared)
+  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 409, in _euclidean_distances
+    distances = -2 * safe_sparse_dot(X, Y.T, dense_output=True)
+                ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+numpy._core._exceptions._ArrayMemoryError: Unable to allocate 30.5 MiB for an array with shape (2000, 2000) and data type float64

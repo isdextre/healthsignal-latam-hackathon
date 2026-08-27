@@ -1,0 +1,6 @@
+transformacion,silueta,artefactos_1var_en_top50
+sin transformar,0.655,0
+winsorizado 4σ,0.6275,0
+winsorizado 8σ,0.655,0
+winsorizado 12σ,0.655,0
+log1p con signo,0.6124,0

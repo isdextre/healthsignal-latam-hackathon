@@ -30,6 +30,11 @@ from sklearn.metrics import silhouette_score
 
 warnings.filterwarnings('ignore')
 RANDOM_STATE, MIN_VENTANA, UMBRAL_ALT = 42, 3, 1.5
+# tamano de muestra para silhouette_score: baja de 8000 a 2000 porque una matriz
+# de distancias 8000x8000 (~488 MB) revento por MemoryError en maquinas con poca
+# RAM libre. 2000x2000 (~32 MB) da una estimacion igual de valida para un
+# diagnostico de calidad de clusters -- no afecta al modelo ni a las alertas.
+SIL_SAMPLE = 2000
 # WINSORIZADO: desactivado. Decision empirica, no por defecto -- ver
 # ablacion_transformaciones() y outputs/ablacion_v2.csv. Con las features
 # intra-ventana y las compuertas de calidad, el cap ya no aporta: mismos 9/10
@@ -170,7 +175,7 @@ def atribucion_local(iso, X, filas, nombres):
 
 
 def narrar(r):
-    partes = [f"{v} {'sube' if DIRECCION[v] > 0 else 'baja'} {r[f'dz_{v}']:.1f}σ"
+    partes = [f"{v} {'sube' if DIRECCION[v] > 0 else 'baja'} {r[f'dz_{v}']:.1f} sigma"
               for v in DIRECCION if r[f'dz_{v}'] > UMBRAL_ALT]
     txt = (f"{int(r['n_alteradas'])}/4 variables alteradas: " + ", ".join(partes)) \
         if partes else "patron atipico sin deterioro direccional dominante"
@@ -252,9 +257,9 @@ def ablacion_transformaciones(df, feats):
     filas = []
     for nombre, fn in [
         ('sin transformar', lambda z: z),
-        ('winsorizado 4σ',  lambda z: z.clip(-4, 4)),
-        ('winsorizado 8σ',  lambda z: z.clip(-8, 8)),
-        ('winsorizado 12σ', lambda z: z.clip(-12, 12)),
+        ('winsorizado 4sigma',  lambda z: z.clip(-4, 4)),
+        ('winsorizado 8sigma',  lambda z: z.clip(-8, 8)),
+        ('winsorizado 12sigma', lambda z: z.clip(-12, 12)),
         ('log1p con signo', lambda z: np.sign(z) * np.log1p(np.abs(z))),
     ]:
         t = df.copy()
@@ -273,7 +278,7 @@ def ablacion_transformaciones(df, feats):
         # cuantas del top-50 son artefacto de una sola variable
         art = (top.head(50)['n_alteradas'] <= 1).sum()
         filas.append({'transformacion': nombre,
-                      'silueta': round(silhouette_score(X, lab, sample_size=8000,
+                      'silueta': round(silhouette_score(X, lab, sample_size=SIL_SAMPLE,
                                                         random_state=0), 4),
                       'artefactos_1var_en_top50': int(art)})
     return pd.DataFrame(filas)
@@ -295,7 +300,7 @@ def main():
         m = IsolationForest(n_estimators=300, contamination=c,
                             random_state=RANDOM_STATE, n_jobs=-1).fit(X)
         lab = m.predict(X)
-        s = silhouette_score(X, lab, sample_size=8000, random_state=0)
+        s = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
         filas.append({'contaminacion': c, 'silueta': round(s, 4),
                       'n_anomalias': int((lab == -1).sum()), 'cumple_0.5': s > 0.5})
     barrido = pd.DataFrame(filas)
@@ -311,7 +316,7 @@ def main():
     lab = iso.predict(X)
     df['score_anomalia'] = -iso.score_samples(X)
     df['es_anomalia'] = lab == -1
-    sil = silhouette_score(X, lab, sample_size=8000, random_state=0)
+    sil = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
     print(f"\n[modelo] contaminacion={CONTAMINACION} silueta={sil:.3f} "
           f"anomalias={df.es_anomalia.sum()}")
 

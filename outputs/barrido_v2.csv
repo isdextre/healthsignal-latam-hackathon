@@ -1,0 +1,7 @@
+contaminacion,silueta,n_anomalias,cumple_0.5
+0.005,0.7798,110,True
+0.01,0.7044,219,True
+0.015,0.6899,328,True
+0.02,0.655,438,True
+0.03,0.6083,656,True
+0.05,0.554,1093,True
