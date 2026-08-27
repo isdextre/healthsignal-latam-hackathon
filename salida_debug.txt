@@ -1,33 +1,51 @@
 [saneamiento] 24859 -> 21859 ventanas | calidad + forma intra-ventana recuperadas del crudo
 [features] 10: ['desv_HR', 'desv_RR', 'desv_TEMP', 'desv_SpO2', 'severidad', 'n_alteradas', 'concordancia', 'discordancia_wearable', 'persistencia_intra', 'tendencia_intra']
-Traceback (most recent call last):
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\notebooks\03_deteccion_anomalias.py", line 404, in <module>
-    main()
-    ~~~~^^
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\notebooks\03_deteccion_anomalias.py", line 303, in main
-    s = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 218, in wrapper
-    return func(*args, **kwargs)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\cluster\_unsupervised.py", line 146, in silhouette_score
-    return float(np.mean(silhouette_samples(X, labels, metric=metric, **kwds)))
-                         ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
-    return func(*args, **kwargs)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\cluster\_unsupervised.py", line 310, in silhouette_samples
-    results = zip(*pairwise_distances_chunked(X, reduce_func=reduce_func, **kwds))
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 2279, in pairwise_distances_chunked
-    D_chunk = pairwise_distances(X_chunk, Y, metric=metric, n_jobs=n_jobs, **kwds)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
-    return func(*args, **kwargs)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 2488, in pairwise_distances
-    return _parallel_pairwise(X, Y, func, n_jobs, **kwds)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 1975, in _parallel_pairwise
-    return func(X, Y, **kwds)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 191, in wrapper
-    return func(*args, **kwargs)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 373, in euclidean_distances
-    return _euclidean_distances(X, Y, X_norm_squared, Y_norm_squared, squared)
-  File "C:\Users\JHOSSEP\Documents\REPO\healthsignal-latam-hackathon\.venv\Lib\site-packages\sklearn\metrics\pairwise.py", line 409, in _euclidean_distances
-    distances = -2 * safe_sparse_dot(X, Y.T, dense_output=True)
-                ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-numpy._core._exceptions._ArrayMemoryError: Unable to allocate 30.5 MiB for an array with shape (2000, 2000) and data type float64
+
+[barrido de contaminacion]
+ contaminacion  silueta  n_anomalias  cumple_0.5
+         0.005   0.7798          110        True
+         0.010   0.7044          219        True
+         0.015   0.6899          328        True
+         0.020   0.6550          438        True
+         0.030   0.6083          656        True
+         0.050   0.5540         1093        True
+
+[estudio de transformaciones]
+     transformacion  silueta  artefactos_1var_en_top50
+    sin transformar   0.6550                         0
+ winsorizado 4sigma   0.6275                         0
+ winsorizado 8sigma   0.6550                         0
+winsorizado 12sigma   0.6550                         0
+    log1p con signo   0.6124                         0
+
+[modelo] contaminacion=0.02 silueta=0.655 anomalias=438
+
+[submission kit] outputs/signals.csv (438 filas, formato validado contra las reglas de validate_submission.py) -- todavia NO copiado a submission_kit/ (falta evidence.csv, ver docstring del modulo)
+priority_level
+LOW         263
+MEDIUM      109
+HIGH         52
+CRITICAL     14
+
+[desempeno]
+  eventos confirmados capturados : 10/11  (en prioridad ALTA: 9)
+  degradadas por contexto        :  96 (21.9%)
+  degradadas por calidad         :  57
+  degradadas por transitoriedad  : 198
+  elevadas por persistencia intra: 111
+  reparto de prioridad           : {'BAJA': 263, 'MEDIA': 109, 'ALTA': 66}
+  ALTA con actividad fisica      : 3 (4.5%)  [v1: 38.1% del total]
+
+[top 10 por prioridad]
+  #1   ALTA  PAT-0148 2026-07-11 12:30 p=1.533 | 4/4 variables alteradas: HR sube 3.3 sigma, RR sube 5.5 sigma, TEMP sube 3.2 sigma, SpO2 baja 6.
+  #2   ALTA  PAT-0844 2026-07-14 12:00 p=1.529 | 4/4 variables alteradas: HR sube 2.9 sigma, RR sube 6.0 sigma, TEMP sube 2.9 sigma, SpO2 baja 6.
+  #3   ALTA  PAT-0189 2026-07-13 16:00 p=1.528 | 4/4 variables alteradas: HR sube 3.0 sigma, RR sube 6.0 sigma, TEMP sube 3.3 sigma, SpO2 baja 6.
+  #4   ALTA  PAT-0242 2026-07-09 15:15 p=1.528 | 4/4 variables alteradas: HR sube 2.9 sigma, RR sube 6.0 sigma, TEMP sube 3.1 sigma, SpO2 baja 6.
+  #5   ALTA  PAT-0265 2026-07-09 16:00 p=1.526 | 4/4 variables alteradas: HR sube 2.8 sigma, RR sube 6.0 sigma, TEMP sube 3.4 sigma, SpO2 baja 6.
+  #6   ALTA  PAT-0084 2026-07-17 13:00 p=1.520 | 4/4 variables alteradas: HR sube 3.1 sigma, RR sube 6.0 sigma, TEMP sube 2.8 sigma, SpO2 baja 6.
+  #7   ALTA  PAT-0716 2026-07-13 11:15 p=1.512 | 4/4 variables alteradas: HR sube 2.8 sigma, RR sube 6.0 sigma, TEMP sube 2.5 sigma, SpO2 baja 6.
+  #8   ALTA  PAT-0153 2026-07-05 12:15 p=1.509 | 4/4 variables alteradas: HR sube 2.4 sigma, RR sube 5.6 sigma, TEMP sube 2.8 sigma, SpO2 baja 6.
+  #9   ALTA  PAT-0001 2026-07-12 09:00 p=1.497 | 3/4 variables alteradas: HR sube 3.5 sigma, RR sube 6.0 sigma, SpO2 baja 6.0 sigma (movimiento c
+  #10  ALTA  PAT-0020 2026-07-15 08:00 p=1.497 | 4/4 variables alteradas: HR sube 2.7 sigma, RR sube 6.0 sigma, TEMP sube 1.6 sigma, SpO2 baja 6.
+
+-> outputs/alertas_v2.csv (438 alertas)

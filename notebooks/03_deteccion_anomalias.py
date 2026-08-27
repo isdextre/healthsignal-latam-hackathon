@@ -35,6 +35,19 @@ RANDOM_STATE, MIN_VENTANA, UMBRAL_ALT = 42, 3, 1.5
 # RAM libre. 2000x2000 (~32 MB) da una estimacion igual de valida para un
 # diagnostico de calidad de clusters -- no afecta al modelo ni a las alertas.
 SIL_SAMPLE = 2000
+
+
+def sil_seguro(X, lab):
+    """silhouette_score con degradacion segura: es una metrica solo
+    diagnostica (no afecta alertas.csv ni signals.csv), asi que si la maquina
+    no tiene memoria para la matriz de distancias no debe tumbar el pipeline
+    completo -- se reporta NaN y se sigue."""
+    try:
+        return silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
+    except MemoryError:
+        print(f"  [aviso] silhouette_score fallo por memoria (sample={SIL_SAMPLE}) "
+              f"-- se reporta NaN, no bloquea el pipeline")
+        return np.nan
 # WINSORIZADO: desactivado. Decision empirica, no por defecto -- ver
 # ablacion_transformaciones() y outputs/ablacion_v2.csv. Con las features
 # intra-ventana y las compuertas de calidad, el cap ya no aporta: mismos 9/10
@@ -271,15 +284,14 @@ def ablacion_transformaciones(df, feats):
         t['concordancia'] = t[[f'desv_{v}' for v in DIRECCION]].min(axis=1)
         X = StandardScaler().fit_transform(t[feats].values)
         m = IsolationForest(n_estimators=300, contamination=CONTAMINACION,
-                            random_state=RANDOM_STATE, n_jobs=-1).fit(X)
+                            random_state=RANDOM_STATE, n_jobs=1).fit(X)
         lab = m.predict(X)
         t['s'] = -m.score_samples(X)
         top = t.nlargest(int((lab == -1).sum()), 's')
         # cuantas del top-50 son artefacto de una sola variable
         art = (top.head(50)['n_alteradas'] <= 1).sum()
         filas.append({'transformacion': nombre,
-                      'silueta': round(silhouette_score(X, lab, sample_size=SIL_SAMPLE,
-                                                        random_state=0), 4),
+                      'silueta': round(sil_seguro(X, lab), 4),
                       'artefactos_1var_en_top50': int(art)})
     return pd.DataFrame(filas)
 
@@ -298,9 +310,9 @@ def main():
     filas = []
     for c in (0.005, 0.01, 0.015, 0.02, 0.03, 0.05):
         m = IsolationForest(n_estimators=300, contamination=c,
-                            random_state=RANDOM_STATE, n_jobs=-1).fit(X)
+                            random_state=RANDOM_STATE, n_jobs=1).fit(X)
         lab = m.predict(X)
-        s = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
+        s = sil_seguro(X, lab)
         filas.append({'contaminacion': c, 'silueta': round(s, 4),
                       'n_anomalias': int((lab == -1).sum()), 'cumple_0.5': s > 0.5})
     barrido = pd.DataFrame(filas)
@@ -312,11 +324,11 @@ def main():
     print("\n[estudio de transformaciones]"); print(abl.to_string(index=False))
 
     iso = IsolationForest(n_estimators=300, contamination=CONTAMINACION,
-                          random_state=RANDOM_STATE, n_jobs=-1).fit(X)
+                          random_state=RANDOM_STATE, n_jobs=1).fit(X)
     lab = iso.predict(X)
     df['score_anomalia'] = -iso.score_samples(X)
     df['es_anomalia'] = lab == -1
-    sil = silhouette_score(X, lab, sample_size=SIL_SAMPLE, random_state=0)
+    sil = sil_seguro(X, lab)
     print(f"\n[modelo] contaminacion={CONTAMINACION} silueta={sil:.3f} "
           f"anomalias={df.es_anomalia.sum()}")
 
