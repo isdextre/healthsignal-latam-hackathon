@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Diagrama de flujo — Base 1 y Base 2 · HealthSignal LATAM</title>
+<style>
+  :root {
+    --blue: #2b5ea3;
+    --blue-bg: #eaf1fb;
+    --blue-border: #b7cfe8;
+    --orange: #c9701a;
+    --orange-bg: #fdf0e2;
+    --orange-border: #f0cfa0;
+    --gray-bg: #f4f5f7;
+    --gray-border: #d9dbe0;
+    --ink: #1c2230;
+    --sub: #5a6270;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 18px 50px;
+    background: #ffffff;
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { color: var(--sub); margin: 0 0 26px; font-size: 14px; }
+
+  .part {
+    border-radius: 14px;
+    padding: 22px 24px 26px;
+    margin-bottom: 8px;
+    border: 1.5px solid;
+  }
+  .part.p1 { background: var(--blue-bg); border-color: var(--blue-border); }
+  .part.p2 { background: var(--orange-bg); border-color: var(--orange-border); }
+
+  .part h2 {
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    margin: 0 0 4px;
+    color: var(--blue);
+  }
+  .part.p2 h2 { color: var(--orange); }
+  .part h3 {
+    font-size: 20px;
+    margin: 0 0 14px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .grid.cols7 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 13px;
+    border: 1px solid var(--blue-border);
+    font-size: 12.5px;
+    line-height: 1.42;
+  }
+  .part.p2 .card { border-color: var(--orange-border); }
+  .card .name {
+    display: block;
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .part.p2 .card .name { color: var(--orange); }
+  .card .desc { color: var(--ink); }
+
+  .refnote {
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: var(--sub);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .refnote .tag {
+    background: #fff;
+    border: 1px dashed var(--blue-border);
+    border-radius: 8px;
+    padding: 4px 9px;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 11px;
+  }
+
+  .arrow-down {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--sub);
+    font-size: 12px;
+    margin: 10px 0;
+  }
+  .arrow-down .line {
+    width: 2px;
+    height: 22px;
+    background: var(--blue-border);
+  }
+  .arrow-down .label {
+    background: #fff;
+    border: 1px solid var(--blue-border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-weight: 600;
+    color: var(--blue);
+  }
+
+  .result-box {
+    margin-top: 14px;
+    background: var(--blue);
+    color: #fff;
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .part.p2 .result-box { background: var(--orange); }
+  .result-box .code { font-family: Consolas, Menlo, monospace; font-weight: 700; font-size: 15px; }
+  .result-box .sub { font-size: 12px; opacity: 0.92; margin-top: 3px; }
+
+  .bigarrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0 4px;
+    color: var(--sub);
+    font-size: 13px;
+    gap: 10px;
+  }
+  .bigarrow .stem {
+    width: 2px;
+    height: 30px;
+    background: linear-gradient(var(--blue), var(--orange));
+  }
+
+  .p2-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 6px;
+  }
+  .p2-inputs .col-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+  }
+  .p2-inputs .grid { grid-template-columns: 1fr; }
+
+  .feed-box {
+    background: #fff;
+    border: 1px solid var(--orange-border);
+    border-radius: 10px;
+    padding: 12px 13px;
+    font-size: 12.5px;
+    margin-bottom: 12px;
+  }
+  .feed-box .name { font-family: Consolas, Menlo, monospace; font-weight: 700; color: var(--orange); display:block; margin-bottom:4px;}
+
+  .final-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 18px;
+    gap: 10px;
+    color: var(--sub);
+    font-size: 12.5px;
+  }
+  .final-box {
+    margin-top: 10px;
+    text-align: center;
+    background: #2c3242;
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>De 17 tablas de RISA a las dos bases internas</h1>
+  <p class="lead">HealthSignal LATAM — flujo de integración: Parte 1 arma <b>timeline_df</b> (una fila por lectura), Parte 2 lo agrega y le suma contexto para armar <b>features_df</b> (una fila por paciente + ventana de 6h), la tabla que entrena el motor de detección.</p>
+
+  <div class="part p1">
+    <h2>PARTE 1 — 01_integracion_timeline.ipynb</h2>
+    <h3>timeline_df (Base 1)</h3>
+    <div class="grid">
+      <div class="card"><span class="name">vital_signs</span><span class="desc">Signos vitales (HR, RR, SBP, DBP, SpO2, TEMP) tomados por el monitor clínico, con su fecha/hora exacta.</span></div>
+      <div class="card"><span class="name">wearable_observations</span><span class="desc">Mediciones del reloj/pulsera del paciente: frecuencia cardiaca, pasos y nivel de actividad.</span></div>
+      <div class="card"><span class="name">device_observations</span><span class="desc">Lecturas de dispositivos médicos/IoT adicionales, incluido el índice de calidad de señal.</span></div>
+      <div class="card"><span class="name">laboratory_results</span><span class="desc">Resultados de exámenes de laboratorio sintéticos (LAB_A a LAB_D).</span></div>
+    </div>
+    <div class="refnote">
+      Se usan también como catálogos de referencia para limpiar estas 4 tablas (no se unen como filas):
+      <span class="tag">units_catalog</span> convierte cada unidad a su forma estándar ·
+      <span class="tag">variable_catalog</span> define el rango fisiológico plausible de cada variable
+    </div>
+    <div class="arrow-down"><div class="line"></div><span class="label">UNION — se apilan las 4 tablas, fila sobre fila</span><div class="line"></div></div>
+    <div class="result-box">
+      <div class="code">timeline_df</div>
+      <div class="sub">Una fila por cada lectura individual de cualquier variable, de cualquier paciente</div>
+    </div>
+  </div>
+
+  <div class="bigarrow"><div class="stem"></div></div>
+  <div class="bigarrow" style="margin-top:-14px;">timeline_df es el insumo principal de la Parte 2 ↓</div>
+
+  <div class="part p2">
+    <h2>PARTE 2 — 02_features_ventanas.ipynb</h2>
+    <h3>features_df (Base 2)</h3>
+
+    <div class="p2-inputs">
+      <div>
+        <div class="col-title">Se agrega y pivotea</div>
+        <div class="feed-box"><span class="name">timeline_df (Base 1)</span>Se agrupa por paciente + ventana de 6h + variable, y se pivotea a formato ancho.</div>
+        <div class="feed-box"><span class="name">encounters</span>Episodio de atención de cada paciente — define su rango de fechas y, con eso, sus ventanas de 6h.</div>
+      </div>
+      <div>
+        <div class="col-title">Contexto estático (mismo valor en todas las ventanas del paciente)</div>
+        <div class="feed-box"><span class="name">patients</span>Datos demográficos del paciente (sexo, edad).</div>
+        <div class="feed-box"><span class="name">healthcare_facilities</span>Información del centro de salud donde ocurre el episodio.</div>
+        <div class="feed-box"><span class="name">conditions</span>Antecedentes clínicos registrados del paciente (cardiovascular, metabólico, renal, respiratorio).</div>
+      </div>
+    </div>
+
+    <div class="col-title" style="margin-top:4px;">CONTEXTO DINÁMICO (UNIÓN POR SOLAPE DE FECHAS — PUEDE CAMBIAR DE UNA VENTANA A OTRA)</div>
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="card"><span class="name">medication_administrations</span><span class="desc">Medicamentos administrados al paciente, cada uno con su propio rango de fechas.</span></div>
+      <div class="card"><span class="name">connectivity_events</span><span class="desc">Problemas de conectividad del dispositivo/canal ocurridos en momentos puntuales.</span></div>
+      <div class="card"><span class="name">patient_context</span><span class="desc">Contexto del paciente en momentos puntuales: actividad física, fase de recuperación, estado de sueño.</span></div>
+    </div>
+
+    <div class="arrow-down"><div class="line"></div><span class="label">JOIN — todo se pega por paciente + ventana</span><div class="line"></div></div>
+    <div class="result-box">
+      <div class="code">features_df</div>
+      <div class="sub">Una fila por paciente + ventana de 6h, con columnas numéricas listas para el modelo</div>
+    </div>
+  </div>
+
+  <div class="final-arrow">↓ única tabla que alimenta la detección ↓</div>
+  <div class="final-box">Motor de reglas + Isolation Forest (notebook 3)</div>
+</div>
+</body>
+</html>
