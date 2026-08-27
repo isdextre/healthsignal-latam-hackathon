@@ -1,0 +1,9 @@
+[timeline] 2535902 filas leidas en chunks de 50000 -> 48113 dentro de alguna ventana de alerta
+
+[evidence] outputs/evidence.csv: 1138 filas para 438 senales
+  [ALERTA] 9 senales SIN ninguna fila de evidencia (el validador oficial rechazaria TODA la entrega por esto): ['SIG-PAT-0844-PAT-0844_w38', 'SIG-PAT-0566-PAT-0566_w5', 'SIG-PAT-0871-PAT-0871_w8', 'SIG-PAT-0724-PAT-0724_w39', 'SIG-PAT-0016-PAT-0016_w9', 'SIG-PAT-0026-PAT-0026_w6', 'SIG-PAT-0208-PAT-0208_w10', 'SIG-PAT-0963-PAT-0963_w9', 'SIG-PAT-0037-PAT-0037_w4']
+evidence_role
+SUPPORTING    547
+PRIMARY       413
+CONTEXT       121
+QUALITY        57
